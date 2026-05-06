@@ -1,8 +1,18 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
+session_start();
+
+require_once '../../bd/conexion.php';
+
+if (!isset($_SESSION['idUsuario'])) {
+    header("Location: ../../index.php?error=2");
+    exit();
 }
+
+
+// Verificar permisos
+$puedeAgregar = tienePermiso($pdo, $_SESSION['idUsuario'], 'catalogo', 'agregar');
+
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -69,7 +79,6 @@ if ($conn->connect_error) {
                 Préstamos
             </button>
             <button class="nav-btn" onclick="seleccionarBoton(this); location.href='../usuarios/usuarios.php'">
-
                 <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
                 Usuarios
             </button>
@@ -86,7 +95,7 @@ if ($conn->connect_error) {
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                 Estadísticas
             </button>
-            <button class="nav-btn">
+            <button class="nav-btn" onclick="seleccionarBoton(this); location.href='../roles/roles.php'">
                 <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/> </svg>
                 Roles
             </button>
@@ -94,12 +103,12 @@ if ($conn->connect_error) {
 
         <div class="sidebar-footer">
             <div class="user-row">
-                <div class="avatar">A</div>
-                <div>
-                    <div class="user-name">Administrador</div>
-                    <div class="user-role">Perfil</div>
-                </div>
-                <button class="logout-btn" title="Cerrar sesión">
+                <div class="avatar"><?= strtoupper(substr($_SESSION['nombre'] ?? 'A', 0, 1)) ?></div>
+                    <div>
+                        <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
+                        <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
+                    </div>
+                <button class="logout-btn" onclick="location.href='../../index.php'" title="Cerrar sesión">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
             </div>
@@ -125,8 +134,10 @@ if ($conn->connect_error) {
                         <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                         <input type="text" id="buscador" placeholder="Escribe aquí para buscar..." autocomplete="off" oninput="buscarMaterial()">
                     </div>
-                    <button class="add-btn" onclick="cargarFormulario()">+ Agregar Material</button>
-                </div>
+                    <?php if ($puedeAgregar): ?>
+                        <button class="add-btn" onclick="cargarFormulario()">+ Agregar Material</button>
+                    <?php endif; ?>
+                    </div>
 
                 <!-- Fila 2: chips + selects -->
                 <div class="filtros-row">

@@ -23,7 +23,7 @@ try {
             'correoInst'    => $u['correoInst'],
             'activo'        => $u['activo'],
             'estadoLabel'   => $u['activo'] === 'si' ? 'Activo' : 'Inactivo',
-            'idTipoPersona' => $u['idTipoPersona'],
+            'idTipoPersona' => $u['idRol'],
             'tipoPersona'   => $u['tipoPersona'] ?? 'Sin tipo',
             'idCarrera'     => $u['idCarrera'],
             'idDivision'    => $u['idDivision'],

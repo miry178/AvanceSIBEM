@@ -32,19 +32,15 @@ $passwordEncriptada = password_hash($password, PASSWORD_DEFAULT);
 // ---- 4. Guardar la contraseña en la BD ----
 $correo = $_SESSION['correo_verificado'];
 
-$stmt = $connect->prepare("UPDATE Usuario SET password = ? WHERE correoInst = ?");
+$stmt = $conn->prepare("UPDATE Usuario SET password = ? WHERE correoInst = ?");
 $stmt->bind_param("ss", $passwordEncriptada, $correo);
 $stmt->execute();
-
-if($stmt->affected_rows > 0){
+if(!$stmt->error){
     // Contraseña guardada exitosamente
     unset($_SESSION['correo_verificado']);
-
-    // Redirigir al login con mensaje de éxito
     header("Location: ../../vistas/login.php?exito=1");
     exit();
 } else {
-    // Algo salió mal con la BD
     header("Location: ../../vistas/registro_paso3.php?error=3");
     exit();
 }

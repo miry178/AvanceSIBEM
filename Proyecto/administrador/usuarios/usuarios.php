@@ -1,8 +1,15 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
+session_start();
+require_once '../../bd/conexion.php';
+
+if (!isset($_SESSION['idUsuario'])) {
+    header("Location: ../../index.php?error=2");
+    exit();
 }
+
+$puedeAgregar    = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'agregar');
+$puedeEditar     = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'editar');
+$puedeDesactivar = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'desactivar');
 
 // Cargar carreras y divisiones para los selects
 $carreras  = $conn->query("SELECT idCarrera, descripcion FROM Carrera ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
@@ -18,7 +25,6 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
     <link rel="stylesheet" href="../home/diseno.css">
     <link rel="stylesheet" href="diseno_usuarios.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 </head>
 <body>
 
@@ -63,18 +69,18 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                 Estadísticas
             </button>
-            <button class="nav-btn">
-                <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/> </svg>
+            <button class="nav-btn" onclick="location.href='../roles/roles.php'">
+                <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
                 Roles
             </button>
         </nav>
         <div class="sidebar-footer">
             <div class="user-row">
-                <div class="avatar">A</div>
-                <div>
-                    <div class="user-name">Administrador</div>
-                    <div class="user-role">Perfil</div>
-                </div>
+            <div class="avatar"><?= strtoupper(substr($_SESSION['nombre'] ?? 'A', 0, 1)) ?></div>
+            <div>
+                <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
+                <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
+            </div>
                 <button class="logout-btn" title="Cerrar sesión">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
@@ -95,20 +101,25 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
                     <input type="text" id="searchInput" placeholder="Buscar por nombre, No. Control, correo..." oninput="filtrar()">
                 </div>
+                <!-- Filtro de tipos cargado dinámicamente desde BD -->
                 <select class="fsel" id="filtroTipo" onchange="filtrar()">
                     <option value="">Todos los tipos</option>
-                    <option>Alumno</option>
-                    <option>Docente</option>
-                    <option>Administrativo</option>
-                    <option>Servicio Social</option>
+                    <?php
+                    $tiposFiltro = $conn->query("SELECT descripcion FROM Rol ORDER BY idRol");
+                    while ($tf = $tiposFiltro->fetch_assoc()) {
+                        echo '<option>' . htmlspecialchars($tf['descripcion']) . '</option>';
+                    }
+                    ?>
                 </select>
                 <select class="fsel" id="filtroEstado" onchange="filtrar()">
                     <option value="">Todos los estados</option>
                     <option>Activo</option>
                     <option>Inactivo</option>
                 </select>
-                <button class="btn-add" onclick="abrirModalNuevo()">+ Nuevo usuario</button>
-            </div>
+                <?php if ($puedeAgregar): ?>
+                    <button class="btn-add" onclick="abrirModalNuevo()">+ Nuevo usuario</button>
+                    <?php endif; ?>
+                </div>
 
             <div class="res-count" id="resCount">Cargando usuarios...</div>
 
@@ -121,7 +132,7 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
                             <th style="width:24%;">Correo</th>
                             <th style="width:13%;">Tipo</th>
                             <th style="width:10%;">Estado</th>
-                            <th style="width:14%;">Acciones</th>
+                            <th style="width:14%;"><?php if ($puedeEditar || $puedeDesactivar): ?>Acciones<?php endif; ?></th>
                         </tr>
                     </thead>
                     <tbody id="tablaBody">
@@ -179,19 +190,24 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
             <legend>Tipo de persona</legend>
             <div class="radio-row">
                 <?php
-                $tipos = $conn->query("SELECT idTipoPersona, descripcion FROM TipoPersona ORDER BY descripcion");
-                while ($tipo = $tipos->fetch_assoc()) {
-                    echo '<label class="rl">
-                        <input type="radio" name="fTipo" value="' . $tipo['idTipoPersona'] . '" 
-                        onchange="cambiarTipo(' . $tipo['idTipoPersona'] . ')">
+                // Cargado dinámicamente desde BD
+                        $tipos = $conn->query("SELECT idRol, descripcion FROM Rol ORDER BY idRol");
+                        while ($tipo = $tipos->fetch_assoc()) {
+                            echo '<label class="rl">
+                            <input type="radio" name="fTipo" value="' . $tipo['idRol'] . '"
+                            onchange="cambiarTipo(' . $tipo['idRol'] . ')">
                         ' . htmlspecialchars($tipo['descripcion']) . '
                     </label>';
                 }
                 ?>
+                
+
+
+
             </div>
         </fieldset>
 
-        <!-- Carrera — solo alumnos -->
+        <!-- Carrera — solo Alumnos (idTipoPersona = 5) -->
         <div class="campo-extra" id="campoCarrera">
             <div class="fl">
                 <label>Carrera *</label>
@@ -204,7 +220,7 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
             </div>
         </div>
 
-        <!-- División — solo docentes -->
+        <!-- División — solo Docentes (idTipoPersona = 4) -->
         <div class="campo-extra" id="campoDivision">
             <div class="fl">
                 <label>División *</label>
@@ -226,19 +242,22 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
         </fieldset>
 
         <div class="form-btns">
-            <button class="btn-red" id="btnEliminar" style="display:none;" onclick="eliminarUsuario()">Eliminar</button>
+            <button class="btn-red" id="btnEliminar" style="display:none;" onclick="eliminarUsuario()">Desactivar</button>
             <button class="btn-yel" onclick="cerrar('mbgForm')">Cancelar</button>
             <button class="btn-grn" onclick="guardarUsuario()">Guardar</button>
         </div>
     </div>
 </div>
+<script>
+const puedeEditar     = <?= $puedeEditar ? 'true' : 'false' ?>;
+const puedeDesactivar = <?= $puedeDesactivar ? 'true' : 'false' ?>;
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 let usuarioEditando = null;
 let todosUsuarios   = [];
 
-// ── Cargar usuarios desde BD ─────────────────────────────────────
 function cargarUsuarios() {
     fetch('buscar_usuarios.php')
         .then(r => r.json())
@@ -249,12 +268,10 @@ function cargarUsuarios() {
         .catch(() => mostrarError('Error de conexión'));
 }
 
-// ── Filtrar en tiempo real ───────────────────────────────────────
 function filtrar() {
-    const q  = document.getElementById('searchInput').value.toLowerCase();
-    const t  = document.getElementById('filtroTipo').value;
-    const e  = document.getElementById('filtroEstado').value;
-
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const t = document.getElementById('filtroTipo').value;
+    const e = document.getElementById('filtroEstado').value;
     const data = todosUsuarios.filter(u => {
         const mQ = !q || u.nombre.toLowerCase().includes(q) || u.idUsuario.toLowerCase().includes(q) || u.correoInst.toLowerCase().includes(q);
         const mT = !t || u.tipoPersona === t;
@@ -264,75 +281,66 @@ function filtrar() {
     renderTabla(data);
 }
 
-// ── Renderizar tabla ─────────────────────────────────────────────
 const tipoBadge = {
-    'Alumno':         '<span class="badge bb">Alumno</span>',
-    'Docente':        '<span class="badge bp">Docente</span>',
-    'Administrativo': '<span class="badge bam">Administrativo</span>',
-    'Servicio Social':'<span class="badge bss">Servicio Social</span>',
+    'Administrador': '<span class="badge" style="background:#faeeda;color:#633806;">Administrador</span>',
+    'Encargado':     '<span class="badge" style="background:#eeedfe;color:#3c3489;">Encargado</span>',
+    'Administrativo':'<span class="badge bam">Administrativo</span>',
+    'Docente':       '<span class="badge bp">Docente</span>',
+    'Alumno':        '<span class="badge bb">Alumno</span>',
+    'Personal':      '<span class="badge bss">Personal</span>',
+    'Invitado':      '<span class="badge" style="background:#f1efe8;color:#444441;">Invitado</span>',
 };
 
 function renderTabla(data) {
     const b = document.getElementById('tablaBody');
     document.getElementById('resCount').textContent = data.length + ' usuario' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
-
     if (!data.length) {
         b.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px;">No se encontraron usuarios</td></tr>';
         return;
     }
-
     b.innerHTML = data.map(u => `
         <tr class="clickable" onclick="verDetalle('${u.idUsuario}')">
             <td style="font-weight:500;">${u.nombre}</td>
             <td style="color:#888;font-size:11px;">${u.idUsuario}</td>
             <td style="font-size:11px;">${u.correoInst}</td>
-            <td>${tipoBadge[u.tipoPersona] || u.tipoPersona}</td>
-            <td>${u.activo === 'si'
-                ? '<span class="badge ba">Activo</span>'
-                : '<span class="badge bi">Inactivo</span>'}</td>
+            <td>${tipoBadge[u.tipoPersona] || '<span class="badge" style="background:#f1efe8;color:#555;">' + u.tipoPersona + '</span>'}</td>
+            <td>${u.activo === 'si' ? '<span class="badge ba">Activo</span>' : '<span class="badge bi">Inactivo</span>'}</td>
             <td>
+                ${puedeEditar ? `
                 <button class="ic-btn" style="background:#fff8c0;" title="Editar"
                     onclick="event.stopPropagation(); abrirModalEditar('${u.idUsuario}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#b8b800" stroke-width="2">
                         <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
-                </button>
-                <button class="ic-btn" style="background:#fcebeb;" title="Eliminar"
+                </button>` : ''}
+                ${puedeDesactivar ? `
+                <button class="ic-btn" style="background:#fcebeb;" title="Desactivar"
                     onclick="event.stopPropagation(); confirmarEliminar('${u.idUsuario}', '${u.nombre}')">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e24b4a" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/>
                         <path d="M19 6l-1 14H6L5 6"/>
                         <path d="M10 11v6M14 11v6"/>
                     </svg>
-                </button>
+                </button>` : ''}
             </td>
         </tr>`).join('');
 }
-
-// ── Ver detalle ──────────────────────────────────────────────────
 function verDetalle(id) {
     const u = todosUsuarios.find(x => x.idUsuario === id);
     if (!u) return;
-
     document.getElementById('detTitulo').textContent = u.nombre;
     document.getElementById('detBody').innerHTML = [
         ['No. Control / RFC', u.idUsuario],
         ['Correo',            u.correoInst],
         ['Tipo',              u.tipoPersona],
-        [u.tipoPersona === 'Alumno' ? 'Carrera' : u.tipoPersona === 'Docente' ? 'División' : 'Área',
-         u.extra || '—'],
+        [u.tipoPersona === 'Alumno' ? 'Carrera' : u.tipoPersona === 'Docente' ? 'División' : 'Área', u.extra || '—'],
         ['Estado', u.activo === 'si' ? 'Activo' : 'Inactivo'],
     ].map(([k, v]) => `<div class="mf"><span class="mfk">${k}</span><span class="mfv">${v}</span></div>`).join('');
-
-    document.getElementById('btnEditarDesdeDetalle').onclick = () => {
-        cerrar('mbgDetalle');
-        abrirModalEditar(id);
-    };
+    document.getElementById('btnEditarDesdeDetalle').onclick = () => { cerrar('mbgDetalle'); abrirModalEditar(id); };
     document.getElementById('mbgDetalle').classList.add('open');
 }
 
-// ── Abrir modal nuevo ────────────────────────────────────────────
 function abrirModalNuevo() {
     usuarioEditando = null;
     document.getElementById('formTitulo').textContent = 'Nuevo usuario';
@@ -348,71 +356,56 @@ function abrirModalNuevo() {
     document.getElementById('mbgForm').classList.add('open');
 }
 
-// ── Abrir modal editar ───────────────────────────────────────────
 function abrirModalEditar(id) {
     const u = todosUsuarios.find(x => x.idUsuario === id);
     if (!u) return;
     usuarioEditando = id;
-
     document.getElementById('formTitulo').textContent = 'Editar usuario — ' + u.nombre;
     document.getElementById('fId').value     = u.idUsuario;
     document.getElementById('fNombre').value = u.nombre;
     document.getElementById('fCorreo').value = u.correoInst;
     document.getElementById('fId').readOnly  = true;
-
     document.querySelectorAll('input[name="fTipo"]').forEach(r => r.checked = r.value === String(u.idTipoPersona));
     document.querySelectorAll('input[name="fEstado"]').forEach(r => r.checked = r.value === u.activo);
     cambiarTipo(u.idTipoPersona);
-
     if (u.idCarrera)  document.getElementById('fCarrera').value  = u.idCarrera;
     if (u.idDivision) document.getElementById('fDivision').value = u.idDivision;
-
     document.getElementById('btnEliminar').style.display = 'inline-flex';
     document.getElementById('mbgForm').classList.add('open');
 }
-// Completar el correo con el NoControl o RFC
+
 function generarCorreo(valor) {
     let id = valor.trim();
-    
     if (id !== '') {
-        // Si empieza con número, agregar L solo en el correo
         let prefijo = /^\d/.test(id) ? 'L' + id : id;
         document.getElementById('fCorreo').value = prefijo + '@cdconstitucion.tecnm.mx';
     } else {
         document.getElementById('fCorreo').value = '';
     }
 }
-//Validar primero si existe ese NoControl o RFC para no continuar y alertar
 
 function verificarId(valor) {
     if (!valor.trim() || usuarioEditando) return;
-
     fetch('buscar_usuarios.php')
         .then(r => r.json())
         .then(data => {
             const existe = data.usuarios.find(u => u.idUsuario.toLowerCase() === valor.trim().toLowerCase());
             if (existe) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Usuario ya existe',
-                    text: 'El No. Control / RFC "' + valor.trim() + '" ya está registrado.',
-                    confirmButtonColor: '#b8b800'
-                });
-                document.getElementById('fId').value    = '';
+                Swal.fire({ icon:'warning', title:'Usuario ya existe', text:'El No. Control / RFC "' + valor.trim() + '" ya está registrado.', confirmButtonColor:'#b8b800' });
+                document.getElementById('fId').value     = '';
                 document.getElementById('fCorreo').value = '';
                 document.getElementById('fId').focus();
             }
         });
 }
 
-// ── Cambiar campos según tipo ────────────────────────────────────
+// Alumno = 5, Docente = 4
 function cambiarTipo(tipo) {
     tipo = parseInt(tipo);
-    document.getElementById('campoCarrera').style.display  = tipo === 2 ? 'block' : 'none';
-    document.getElementById('campoDivision').style.display = tipo === 1 ? 'block' : 'none';
+    document.getElementById('campoCarrera').style.display  = tipo === 5 ? 'block' : 'none';
+    document.getElementById('campoDivision').style.display = tipo === 4 ? 'block' : 'none';
 }
 
-// ── Guardar usuario ──────────────────────────────────────────────
 function guardarUsuario() {
     const id       = document.getElementById('fId').value.trim();
     const nombre   = document.getElementById('fNombre').value.trim();
@@ -430,22 +423,23 @@ function guardarUsuario() {
     const carrera  = document.getElementById('fCarrera').value;
     const division = document.getElementById('fDivision').value;
 
-    if (tipo === '2' && !carrera) {
+    // Alumno = 5, Docente = 4
+    if (tipo === '5' && !carrera) {
         Swal.fire({ icon:'warning', title:'Falta la carrera', text:'Selecciona una carrera para el alumno.', confirmButtonColor:'#b8b800' }); return;
     }
-    if (tipo === '1' && !division) {
+    if (tipo === '4' && !division) {
         Swal.fire({ icon:'warning', title:'Falta la división', text:'Selecciona una división para el docente.', confirmButtonColor:'#b8b800' }); return;
     }
 
     const fd = new FormData();
-    fd.append('idUsuario',    id);
-    fd.append('nombre',       nombre);
-    fd.append('correoInst',   correo);
-    fd.append('idTipoPersona',tipo);
-    fd.append('activo',       estado);
-    fd.append('idCarrera',    carrera);
-    fd.append('idDivision',   division);
-    fd.append('editando',     usuarioEditando || '');
+    fd.append('idUsuario',     id);
+    fd.append('nombre',        nombre);
+    fd.append('correoInst',    correo);
+    fd.append('idTipoPersona', tipo);
+    fd.append('activo',        estado);
+    fd.append('idCarrera',     carrera);
+    fd.append('idDivision',    division);
+    fd.append('editando',      usuarioEditando || '');
 
     fetch('procesar_usuario.php', { method:'POST', body: fd })
         .then(r => r.json())
@@ -461,7 +455,6 @@ function guardarUsuario() {
         .catch(() => Swal.fire({ icon:'error', title:'Error', text:'Error de conexión', confirmButtonColor:'#dc3545' }));
 }
 
-// ── Confirmar y eliminar ─────────────────────────────────────────
 function confirmarEliminar(id, nombre) {
     Swal.fire({
         icon: 'warning',
@@ -496,6 +489,7 @@ function eliminarUsuario() {
 }
 
 function cerrar(id) { document.getElementById(id).classList.remove('open'); }
+
 function mostrarError(msg) {
     document.getElementById('tablaBody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:#e24b4a;padding:20px;">' + msg + '</td></tr>';
 }

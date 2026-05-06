@@ -1,5 +1,5 @@
 <?php
-// Mensajes de error por parámetro GET, igual que en clase
+// Mensajes de error por parámetro GET
 $error = $_GET['error'] ?? '';
 if($error === '1'){
     echo '<div class="alert alert-danger text-center" role="alert">
@@ -66,6 +66,7 @@ if($error === '3'){
                         </p>
 
                         <!-- Paso 1: solo pide el correo institucional -->
+                         <!--  Vista donde el usuario escribe su correo institucional y presiona "Enviar código". -->
                         <form action="../php/php_registro/enviar_codigo.php" method="POST">
 
                             <div class="mb-3">

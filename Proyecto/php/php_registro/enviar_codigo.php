@@ -3,7 +3,6 @@ session_start();
 
 // Incluimos la conexión a la BD
 require_once '../../bd/conexion.php';
-
 // Incluimos PHPMailer — estos 3 archivos vienen de la carpeta src/ que descargaste
 require_once '../mailer/src/Exception.php';
 require_once '../mailer/src/PHPMailer.php';
@@ -13,8 +12,7 @@ require_once '../mailer/src/SMTP.php';
 $correo = trim($_POST['correo'] ?? '');
 
 // ---- 1. Verificar que el correo exista en la BD ----
-// Usamos prepared statement para evitar SQL injection
-$stmt = $connect->prepare("SELECT idUsuario, nombre, password FROM Usuario WHERE correoInst = ?");
+$stmt = $conn->prepare("SELECT idUsuario, nombre, password FROM Usuario WHERE correoInst = ?");
 $stmt->bind_param("s", $correo);
 $stmt->execute();
 $resultado = $stmt->get_result();
@@ -52,21 +50,20 @@ $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
 try {
     // Configuración del servidor SMTP de Gmail usando sockets
-    $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com';
-    $mail->SMTPAuth   = true;
-    $mail->Username   = 'sibembiblioteca@gmail.com';
-    $mail->Password   = 'vgom vulh fiqk uqqp';
-    $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
-    // Desactivar verificación SSL para funcionar sin OpenSSL en EasyPHP
-    $mail->SMTPOptions = array(
-        'ssl' => array(
-            'verify_peer'       => false,
-            'verify_peer_name'  => false,
-            'allow_self_signed' => true
-        )
-    );
+$mail->isSMTP();
+$mail->Host       = 'smtp.gmail.com';
+$mail->SMTPAuth   = true;
+$mail->Username   = 'sibembiblioteca@gmail.com';
+$mail->Password   = 'yblu wpif sglj mmnh';
+$mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
+$mail->Port       = 465;
+$mail->SMTPOptions = array(
+    'ssl' => array(
+        'verify_peer'       => false,
+        'verify_peer_name'  => false,
+        'allow_self_signed' => true
+    )
+);
 
     // Configuración del correo
     $mail->setFrom('sibembiblioteca@gmail.com', 'SIBEM Biblioteca');
@@ -102,12 +99,11 @@ try {
     $mail->send();
 
     // Si el correo se envió bien, ir al paso 2
-    header("Location: ../../registro_paso2.php");
+    header("Location: ../../vistas/registro_paso2.php");
     exit();
 
 } catch (Exception $e) {
-    // Si hubo error al enviar el correo
-    header("Location: ../../vistas/registro_paso1.php?error=3");
-    exit();
+    // Mostrar el error real para depurar
+    die("Error al enviar: " . $mail->ErrorInfo);
 }
 ?>

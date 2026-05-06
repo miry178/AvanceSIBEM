@@ -13,7 +13,7 @@ $pdo = new PDO("mysql:host=localhost;dbname=biblioteca;charset=utf8mb4", "root",
     PDO::ATTR_EMULATE_PREPARES   => false,
 ]);
 
-// ── ELIMINAR  (desactivar usuario) ────────────────────────────────────────────────────
+// ── DESACTIVAR usuario ─────────────────────────────────────────
 if (!empty($_POST['eliminar'])) {
     $id = trim($_POST['idUsuario'] ?? '');
     if (!$id) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
@@ -28,11 +28,10 @@ if (!empty($_POST['eliminar'])) {
     exit;
 }
 
-// ── GUARDAR (nuevo o editar) ─────────────────────────────────────
+// ── GUARDAR (nuevo o editar) ───────────────────────────────────
 $idUsuario     = trim($_POST['idUsuario']     ?? '');
 $nombre        = trim($_POST['nombre']        ?? '');
 $correoInst    = trim($_POST['correoInst']    ?? '');
-$password      = trim($_POST['password']      ?? '') ?: null;
 $idTipoPersona = intval($_POST['idTipoPersona'] ?? 0);
 $activo        = ($_POST['activo'] ?? '') === 'si' ? 'si' : 'no';
 $idCarrera     = intval($_POST['idCarrera']   ?? 0);
@@ -48,15 +47,15 @@ try {
 
     if ($editando) {
         // Editar sin tocar la contraseña
-        $pdo->prepare("UPDATE Usuario SET nombre=?, correoInst=?, activo=? WHERE idUsuario=?")
-            ->execute([$nombre, $correoInst, $activo, $idUsuario]);
+        $pdo->prepare("UPDATE Usuario SET nombre=?, correoInst=?, activo=?, idRol=? WHERE idUsuario=?")
+            ->execute([$nombre, $correoInst, $activo, $idTipoPersona, $idUsuario]);
 
-        // Actualizar tipo
-        $pdo->prepare("UPDATE RelTipoPersona SET idTipoPersona=? WHERE idUsuario=?")
+        // Actualizar rol en RelRol
+        $pdo->prepare("UPDATE RelRol SET idRol=? WHERE idUsuario=?")
             ->execute([$idTipoPersona, $idUsuario]);
 
-        // Actualizar carrera o división
-        if ($idTipoPersona == 2 && $idCarrera) {
+        // Actualizar carrera (Alumno = 5) o división (Docente = 4)
+        if ($idTipoPersona == 5 && $idCarrera) {
             $existe = $pdo->prepare("SELECT idUsuario FROM Alumno WHERE idUsuario=?");
             $existe->execute([$idUsuario]);
             if ($existe->fetch()) {
@@ -65,7 +64,7 @@ try {
                 $pdo->prepare("INSERT INTO Alumno (idUsuario, idCarrera) VALUES (?,?)")->execute([$idUsuario, $idCarrera]);
             }
         }
-        if ($idTipoPersona == 1 && $idDivision) {
+        if ($idTipoPersona == 4 && $idDivision) {
             $existe = $pdo->prepare("SELECT idUsuario FROM Docente WHERE idUsuario=?");
             $existe->execute([$idUsuario]);
             if ($existe->fetch()) {
@@ -87,19 +86,19 @@ try {
             $pdo->rollBack(); exit;
         }
 
-        // Insertar en Usuario con contraseña NULL
-        $pdo->prepare("INSERT INTO Usuario (idUsuario, correoInst, nombre, activo, password) VALUES (?,?,?,?,?)")
-            ->execute([$idUsuario, $correoInst, $nombre, $activo, null]);
+        // Insertar en Usuario con contraseña NULL e idRol
+        $pdo->prepare("INSERT INTO Usuario (idUsuario, correoInst, nombre, activo, password, idRol) VALUES (?,?,?,?,?,?)")
+            ->execute([$idUsuario, $correoInst, $nombre, $activo, null, $idTipoPersona]);
 
-        // Insertar relación de tipo
-        $pdo->prepare("INSERT INTO RelTipoPersona (idUsuario, correoInst, idTipoPersona) VALUES (?,?,?)")
+        // Insertar en RelRol
+        $pdo->prepare("INSERT INTO RelRol (idUsuario, correoInst, idRol) VALUES (?,?,?)")
             ->execute([$idUsuario, $correoInst, $idTipoPersona]);
 
-        // Insertar en Alumno o Docente según tipo
-        if ($idTipoPersona == 2 && $idCarrera) {
+        // Insertar en Alumno o Docente según rol
+        if ($idTipoPersona == 5 && $idCarrera) {
             $pdo->prepare("INSERT INTO Alumno (idUsuario, idCarrera) VALUES (?,?)")->execute([$idUsuario, $idCarrera]);
         }
-        if ($idTipoPersona == 1 && $idDivision) {
+        if ($idTipoPersona == 4 && $idDivision) {
             $pdo->prepare("INSERT INTO Docente (idUsuario, idDivision) VALUES (?,?)")->execute([$idUsuario, $idDivision]);
         }
 
