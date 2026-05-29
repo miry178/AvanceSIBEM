@@ -18,11 +18,13 @@ $clasificacion = trim($_GET['clasificacion'] ?? '');
 $tipo          = trim($_GET['tipo']          ?? '');
 $estado        = trim($_GET['estado']        ?? '');
 $orden         = trim($_GET['orden']         ?? 'titulo');
+$pagina        = max(1, intval($_GET['pagina'] ?? 1));
+$porPagina     = 3;
+$offset        = ($pagina - 1) * $porPagina;
 
 $where  = ['1=1'];
 $params = [];
 
-// Filtro por texto + chip seleccionado
 if ($q !== '') {
     switch ($campo) {
         case 'titulo':
@@ -50,13 +52,11 @@ if ($q !== '') {
     }
 }
 
-// Filtro por clasificación (área o carrera)
 if ($clasificacion !== '') {
     $where[]  = 'clasificacion = ?';
     $params[] = $clasificacion;
 }
 
-// Filtro por tipo de material (Libro, Revista, Tesis...)
 if ($tipo !== '') {
     $where[]  = 'tipoMaterial = ?';
     $params[] = $tipo;
@@ -74,11 +74,26 @@ $having = '';
 if ($estado === 'disponible')   $having = 'HAVING disponibles > 0';
 if ($estado === 'nodisponible') $having = 'HAVING disponibles = 0';
 
-// USO DE LA VISTA EN MYSQL
+$whereSQL = implode(' AND ', $where);
+
+// Contar total de resultados
+$sqlTotal = "SELECT COUNT(*) FROM (
+    SELECT idMaterial FROM vista_material
+    WHERE $whereSQL
+    $having
+) AS total";
+
+$stmtTotal = $pdo->prepare($sqlTotal);
+$stmtTotal->execute($params);
+$total = (int)$stmtTotal->fetchColumn();
+$totalPaginas = ceil($total / $porPagina);
+
+// Consulta con paginación
 $sql = "SELECT * FROM vista_material
-        WHERE " . implode(' AND ', $where) . "
+        WHERE $whereSQL
         $having
-        ORDER BY $orderSQL";
+        ORDER BY $orderSQL
+        LIMIT $porPagina OFFSET $offset";
 
 try {
     $stmt = $pdo->prepare($sql);
@@ -86,9 +101,12 @@ try {
     $materiales = $stmt->fetchAll();
 
     echo json_encode([
-        'ok'         => true,
-        'total'      => count($materiales),
-        'materiales' => $materiales,
+        'ok'           => true,
+        'total'        => $total,
+        'pagina'       => $pagina,
+        'totalPaginas' => $totalPaginas,
+        'porPagina'    => $porPagina,
+        'materiales'   => $materiales,
     ]);
 } catch (Exception $e) {
     http_response_code(500);

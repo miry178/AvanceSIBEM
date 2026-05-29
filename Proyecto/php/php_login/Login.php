@@ -34,7 +34,7 @@ if($usuario['activo'] === 'no'){
 
 // ---- 3. Verificar si ya tiene contraseña ----
 // Si el campo password está vacío, el usuario nunca se ha registrado
-// Lo mandamos al paso 1 del registro para que cree su contraseña
+// Lo mandamos al paso 1 del registro para que cree su contrasea
 
 if(empty($usuario['password'])){
     header("Location: ../../vistas/registro_paso1.php?error=3");
@@ -54,7 +54,7 @@ $_SESSION['idUsuario'] = $usuario['idUsuario'];
 $_SESSION['nombre']    = $usuario['nombre'];
 $_SESSION['correo']    = $correo;
 
-// ---- 6. Obtener el tipo de persona ----
+// ---- 6. Obtener el tipo de persona/rol ----
 // Consultamos qué tipo de usuario es (Administrador, Alumno, Docente, etc.)
 // para saber a qué página redirigirlo
 $stmtTipo = $conn->prepare("
@@ -76,8 +76,6 @@ $_SESSION['tipoUsuario'] = $tipo['descripcion'] ?? 'Invitado';
 switch($_SESSION['tipoUsuario']){
     case 'Administrador':
     case 'Encargado':
-        header("Location: ../../administrador/home/inicio.php");
-        break;
     case 'Alumno':
     case 'Docente':
     case 'Personal':

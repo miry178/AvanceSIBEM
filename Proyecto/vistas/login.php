@@ -25,7 +25,7 @@ $exito = $_GET['exito'] ?? '';
             crossorigin="anonymous"></script>
 
     <!-- CSS propio del login — separado en su archivo para mejor organización -->
-    <link rel="stylesheet" href="../css/diseno_login.css">
+    <link rel="stylesheet" href="../login/diseno_login.css">
 </head>
 
 <body class="d-flex align-items-center justify-content-center">

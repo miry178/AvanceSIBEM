@@ -43,7 +43,7 @@ if($error === '2'){
             crossorigin="anonymous"></script>
 
     <!-- CSS propio -->
-    <link rel="stylesheet" href="../css/diseno_login.css">
+    <link rel="stylesheet" href="../login/diseno_login.css">
 </head>
 
 <body class="d-flex align-items-center justify-content-center">
@@ -61,10 +61,14 @@ if($error === '2'){
                                  style="max-height: 70px;"
                                  onerror="this.style.display='none'">
                         </div>
-
-                        <h5 class="text-center fw-bold mb-1">Crea tu contraseña</h5>
+                        <?php $esRecuperacion = $_SESSION['es_recuperacion'] ?? false; ?>
+                        <h5 class="text-center fw-bold mb-1">
+                            <?= $esRecuperacion ? 'Nueva contraseña' : 'Crea tu contraseña' ?>
+                        </h5>
                         <p class="text-center text-muted small mb-4">
-                            Ya verificamos tu identidad. Ahora crea una contraseña para tu cuenta SIBEM.
+                            <?= $esRecuperacion 
+                                ? 'Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta SIBEM.' 
+                                : 'Ya verificamos tu identidad. Ahora crea una contraseña para tu cuenta SIBEM.' ?>
                         </p>
 
                         <!-- Paso 3: crear la contraseña -->
@@ -155,11 +159,11 @@ if($error === '2'){
             if(pass2 === ''){
                 mensaje.textContent = '';
             } else if(pass1 === pass2){
-                mensaje.textContent = '✅ Las contraseñas coinciden';
+                mensaje.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> Las contraseñas coinciden';
                 mensaje.style.color = '#2e7d32';
                 boton.disabled = false;
             } else {
-                mensaje.textContent = '❌ Las contraseñas no coinciden';
+                mensaje.innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> Las contraseñas no coinciden';
                 mensaje.style.color = '#c62828';
                 boton.disabled = true;
             }

@@ -1,109 +1,231 @@
-/* =============================================
-   diseno_login.css — Estilos para login SIBEM
-   ============================================= */
-
-/* Color de fondo verde oscuro que se ve en la referencia */
-body {
-    background-color: #1e4d2b;
-    min-height: 100vh;
+/* ── Métricas ── */
+.metricas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
 }
 
-/* Panel izquierdo verde claro decorativo */
-.panel-decorativo {
-    background-color: #c8e6c9;
+.metrica-card {
+    background: #fff;
+    border: 0.5px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.metrica-icon { font-size: 28px; }
+
+.metrica-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.metrica-num {
+    font-size: 28px;
+    font-weight: 600;
+    color: #222;
+}
+
+/* ── Toolbar ── */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 0.5px solid #ddd;
     border-radius: 8px;
-    min-height: 320px;
+    padding: 7px 12px;
+    flex: 1;
+    min-width: 200px;
 }
 
-/* Inputs con fondo verde muy claro, igual a la referencia */
-.input-sibem {
-    background-color: #e8f5e9 !important;
-    border: 1px solid #a5d6a7 !important;
+.search-box input {
+    border: none;
+    outline: none;
+    font-size: 13px;
+    width: 100%;
+    background: transparent;
+}
+
+.fsel {
+    border: 0.5px solid #ddd;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+    background: #fff;
+    outline: none;
+}
+
+.btn-add {
+    background: #1f4d1f;
+    color: #fff;
+    border: none;
     border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.btn-add:hover { background: #1f4d1f; }
+/* ── Contador ── */
+.res-count {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 10px;
 }
 
-.input-sibem:focus {
-    background-color: #e8f5e9 !important;
-    border-color: #388e3c !important;
-    box-shadow: 0 0 0 0.2rem rgba(56, 142, 60, 0.25) !important;
-}
-
-/* Ícono dentro del input */
-.input-group-text {
-    background-color: #e8f5e9 !important;
-    border: 1px solid #a5d6a7 !important;
-}
-
-/* Botón Login igual al de la referencia */
-.btn-login {
-    background-color: #e8f5e9;
-    border: 1px solid #a5d6a7;
-    color: #1b5e20;
-    font-weight: 500;
-}
-
-.btn-login:hover {
-    background-color: #c8e6c9;
-    border-color: #388e3c;
-    color: #1b5e20;
-}
-
-/* Link de olvidó contraseña */
-.link-olvido {
-    color: #2e7d32;
-    font-size: 0.85rem;
-    text-decoration: underline;
-}
-
-.link-olvido:hover {
-    color: #1b5e20;
-}
-
-
-/* =============================================
-   ANIMACIÓN — solo se agrega, nada de arriba
-   fue modificado ni eliminado
-   ============================================= */
-
-/* La card necesita position relative para que el canvas
-   del rayo pueda posicionarse encima de todo */
-.card {
-    position: relative;
+/* ── Tabla ── */
+.tw {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e8e8e8;
     overflow: hidden;
 }
 
-/* El panel decorativo cambia a fondo oscuro para la animación */
-.panel-decorativo.anim-activa {
-    background-color: #0d1f15 !important;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Canvas de escena — ocupa todo el panel izquierdo */
-#animCanvas {
-    position: absolute;
-    inset: 0;
+.tw table {
     width: 100% !important;
-    height: 100% !important;
-    display: block;
-    border-radius: 8px;
+    border-collapse: collapse !important;
+    font-size: 13px !important;
 }
 
-
-/* Brillo verde en inputs cuando la onda los toca */
-.input-sibem.lit {
-    border-color: #5adf9a !important;
-    box-shadow: 0 0 14px rgba(80, 220, 140, 0.55) !important;
+.tw thead tr {
+    border-bottom: 1px solid #e8f0d8 !important;height: 40px;
 }
 
-/* Brillo en botón login */
-.btn-login.lit {
-    border-color: #5adf9a !important;
-    box-shadow: 0 0 18px rgba(80, 220, 140, 0.65) !important;
+.tw th {
+    padding: 12px 16px !important;
+    text-align: left !important;
+    font-weight: 500 !important;
+    color: #888 !important;
+    font-size: 12px !important;
+    background: #fff !important;
+    border: none !important;
 }
 
-/* Brillo en el título "Welcome back to SIBEM" */
-.titulo-sibem.lit {
-    text-shadow: 0 0 18px rgba(80, 220, 140, 0.8);
-    color: #1a5a2a !important;
+.tw td {
+    padding: 16px 16px !important;
+    border-bottom: 0.5px solid #f5f5f5 !important;
+    color: #333 !important;
+    background: #fff !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
 }
+
+.tw tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.tw tr:hover td {
+    background: #fafafa !important;
+}
+
+.tw thead {
+    background: #fafaf0 !important;
+    border-bottom: 1.5px solid #e8e8d0 !important;
+}
+
+.tw th {
+    padding: 12px 16px !important;
+    text-align: left !important;
+    font-weight: 500 !important;
+    color: #555 !important;
+    font-size: 12px !important;
+    background: transparent !important;
+    border: none !important;
+}
+/* ── Badges ── */
+.badge-activo {
+    background: #eaf3de;
+    color: #27500a;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+.badge-vencido {
+    background: #fcebeb;
+    color: #a32d2d;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+.badge-por-vencer {
+    background: #faeeda;
+    color: #633806;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+/* ── Botón Devolver ── */
+.btn-devolver {
+    background: #1f4d1f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-devolver:hover { background: #1f4d1f; }
+/* ── Modal devolver ── */
+.mbg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.mbg.open { display: flex; }
+.modal-sibem {
+    background: #fff;
+    border: 2px solid #b8b800;
+    border-radius: 10px;
+    padding: 20px 22px;
+    width: 420px;
+    max-width: 95%;
+}
+.modal-sm { width: 380px; }
+.mh {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+.mh h2 {
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #1a1a00; 
+}
+.mx { background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; line-height: 1; }
+.mf { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: .5px solid #f0f0f0; font-size: 12px; }
+.mf:last-child { border-bottom: none; }
+.mfk { color: #888; }
+.mfv { color: #1a1a00; font-weight: 500; }
+.form-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee; }
+.btn-yel { padding: 7px 14px; background: #f5e840; border: 1.5px solid #b8b800; border-radius: 6px; font-size: 12px; font-weight: 500; color: #1a1a00; cursor: pointer; }
+.btn-grn { padding: 7px 14px; background: #2d6a2d; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; color: #fff; cursor: pointer; }
+.btn-grn:hover { background: #1f4d1f; }
+.swal2-container { z-index: 99999 !important; }

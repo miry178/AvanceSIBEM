@@ -3,7 +3,7 @@ session_start();
 
 // Incluimos la conexión a la BD
 require_once '../../bd/conexion.php';
-// Incluimos PHPMailer — estos 3 archivos vienen de la carpeta src/ que descargaste
+// Incluimos PHPMailer — estos 3 archivos vienen de la carpeta src/ 
 require_once '../mailer/src/Exception.php';
 require_once '../mailer/src/PHPMailer.php';
 require_once '../mailer/src/SMTP.php';
@@ -17,21 +17,25 @@ $stmt->bind_param("s", $correo);
 $stmt->execute();
 $resultado = $stmt->get_result();
 
+// Si el correo NO existe en la BD
 if($resultado->num_rows === 0){
-    // El correo NO existe en la BD
+    
     header("Location: ../../vistas/registro_paso1.php?error=1");
     exit();
 }
 
 $usuario = $resultado->fetch_assoc();
 
-// ---- 2. Verificar si ya tiene password (ya está registrado) ----
+/* ---- 2. Verificar si ya tiene password (ya está registrado) ----
 if(!empty($usuario['password'])){
     // Ya tiene password, no necesita registrarse de nuevo
     header("Location: ../../vistas/registro_paso1.php?error=2");
     
     exit();
-}
+} */
+
+// ---- 2. Guardar si es recuperación o registro nuevo ----
+$_SESSION['es_recuperacion'] = !empty($usuario['password']);
 
 // ---- 3. Generar código de 6 dígitos aleatorio ----
 // rand(100000, 999999) genera un número entre 100000 y 999999
@@ -93,8 +97,7 @@ $mail->SMTPOptions = array(
             <p style='color: #888; font-size: 12px;'>
                 ITS Ciudad Constitución — Sistema SIBEM
             </p>
-        </div>
-    ";
+        </div>    ";
 
     $mail->send();
 
@@ -102,8 +105,13 @@ $mail->SMTPOptions = array(
     header("Location: ../../vistas/registro_paso2.php");
     exit();
 
-} catch (Exception $e) {
+/*} catch (Exception $e) {
     // Mostrar el error real para depurar
     die("Error al enviar: " . $mail->ErrorInfo);
+}*/
+} catch (Exception $e) {
+    header("Location: ../../vistas/registro_paso1.php?error=3");
+    exit();
 }
+
 ?>

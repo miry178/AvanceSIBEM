@@ -36,12 +36,14 @@ $stmt = $conn->prepare("UPDATE Usuario SET password = ? WHERE correoInst = ?");
 $stmt->bind_param("ss", $passwordEncriptada, $correo);
 $stmt->execute();
 if(!$stmt->error){
-    // Contraseña guardada exitosamente
+    $esRecuperacion = $_SESSION['es_recuperacion'] ?? false;
     unset($_SESSION['correo_verificado']);
-    header("Location: ../../vistas/login.php?exito=1");
-    exit();
-} else {
-    header("Location: ../../vistas/registro_paso3.php?error=3");
+    unset($_SESSION['es_recuperacion']);
+    if($esRecuperacion){
+        header("Location: ../../index.php?exito=1");
+    } else {
+        header("Location: ../../index.php?exito=1");
+    }
     exit();
 }
 ?>

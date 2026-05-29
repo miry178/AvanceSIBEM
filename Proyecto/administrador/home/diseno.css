@@ -269,24 +269,18 @@ body {
  
 /* Botón "+ Agregar libro" */
 .add-btn {
-    background-color: #2d6a2d;
+    background: #1f4d1f;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    padding: 9px 16px;
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
     cursor: pointer;
     white-space: nowrap;
+    font-family: inherit;
 }
+.add-btn:hover { background: #1f4d1f; }
 
-.add-btn:hover {
-    background-color: #1f4d1f;
-}
- 
-.add-btn:hover {
-    background-color: #ffff71       /* verde más oscuro al pasar el mouse */
-}
 
 /* ESTILOS INICIO */
 
@@ -367,7 +361,22 @@ body {
 .results-header    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .results-header span { font-size: 13px; color: #555; }
 
-
+.btn-pag {
+    padding: 5px 12px;
+    border: 1.5px solid #e0e0c0;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 12px;
+}
+.btn-pag:hover { background: #f9f9f0; border-color: #b8b800; }
+.btn-pag-activo {
+    background: #2d6a2d;
+    color: #fff;
+    border-color: #2d6a2d;
+    cursor: default;
+}
 
  
  

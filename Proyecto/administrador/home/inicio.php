@@ -82,13 +82,9 @@ $puedeAgregar = tienePermiso($pdo, $_SESSION['idUsuario'], 'catalogo', 'agregar'
                 <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
                 Usuarios
             </button>
-<<<<<<< HEAD
+
             <button class="nav-btn" onclick="seleccionarBoton(this); location.href='../adeudos/adeudos.php'">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-=======
-            <button class="nav-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
->>>>>>> d5f4989004c2586faa5435c0fc2a2ee70b998162
                 Adeudos
             </button>
             <button class="nav-btn">
@@ -224,6 +220,7 @@ function seleccionarBoton(btn) {
 // ── Chips de filtro ──────────────────────────────────────────────
 let campoActivo    = 'todo';
 let timeoutBusqueda = null;
+let paginaActual   = 1;
 
 function setChip(el) {
     document.querySelectorAll('.chip-filtro').forEach(c => c.classList.remove('active'));
@@ -243,10 +240,10 @@ function setChip(el) {
 // ── Búsqueda con debounce (espera 300ms antes de buscar) ─────────
 function buscarMaterial() {
     clearTimeout(timeoutBusqueda);
-    timeoutBusqueda = setTimeout(_ejecutarBusqueda, 300);
+    timeoutBusqueda = setTimeout(() => _ejecutarBusqueda(1), 300);
 }
-
-function _ejecutarBusqueda() {
+function _ejecutarBusqueda(pagina = 1) {
+    paginaActual = pagina;
     const q              = document.getElementById('buscador').value.trim();
     const clasificacion  = document.getElementById('filtroClasificacion').value;
     const tipo           = document.getElementById('filtroTipo').value;
@@ -254,21 +251,46 @@ function _ejecutarBusqueda() {
     const orden          = document.getElementById('filtroOrden').value;
 
     const params = new URLSearchParams({
-        q,
-        campo:         campoActivo,
-        clasificacion,
-        tipo,
-        estado,
-        orden
+        q, campo: campoActivo, clasificacion, tipo, estado, orden, pagina
     });
 
     fetch('buscar_material.php?' + params)
         .then(r => r.json())
         .then(data => {
-            if (data.ok) renderTarjetas(data.materiales);
-            else mostrarError('Error al cargar los materiales: ' + data.error);
+            if (data.ok) {
+                renderTarjetas(data.materiales);
+                renderPaginacion(data.pagina, data.totalPaginas, data.total);
+            } else mostrarError('Error al cargar los materiales: ' + data.error);
         })
         .catch(() => mostrarError('Error de conexión con el servidor.'));
+}
+
+function renderPaginacion(pagina, totalPaginas, total) {
+    const count = document.getElementById('resCount');
+    count.textContent = total + ' resultado' + (total !== 1 ? 's' : '') + ' encontrado' + (total !== 1 ? 's' : '') + ' — Página ' + pagina + ' de ' + totalPaginas;
+
+    let html = '<div style="display:flex;gap:6px;justify-content:center;margin-top:14px;flex-wrap:wrap;">';
+
+    if (pagina > 1) {
+        html += `<button class="btn-pag" onclick="_ejecutarBusqueda(${pagina - 1})">&#8592;  </button>`;
+    }
+
+    for (let i = 1; i <= totalPaginas; i++) {
+        if (i === pagina) {
+            html += `<button class="btn-pag btn-pag-activo">${i}</button>`;
+        } else if (i === 1 || i === totalPaginas || (i >= pagina - 2 && i <= pagina + 2)) {
+            html += `<button class="btn-pag" onclick="_ejecutarBusqueda(${i})">${i}</button>`;
+        } else if (i === pagina - 3 || i === pagina + 3) {
+            html += `<span style="align-self:center;color:#aaa;">...</span>`;
+        }
+    }
+
+    if (pagina < totalPaginas) {
+        html += `<button class="btn-pag" onclick="_ejecutarBusqueda(${pagina + 1})" > &#8594;</button>`;
+    }
+
+    html += '</div>';
+    document.getElementById('listaResultados').insertAdjacentHTML('beforeend', html);
 }
 
 // ── Renderizar tarjetas horizontales ────────────────────────────
@@ -358,23 +380,23 @@ function mostrarError(msg) {
 
 // ── Ver detalle con SweetAlert2 ──────────────────────────────────
 function verDetalle(id) {
-    fetch('buscar_material.php?q=&campo=todo&clasificacion=&tipo=&estado=&orden=titulo')
+    fetch('buscar_material_id.php?id=' + id)
         .then(r => r.json())
         .then(data => {
-            const m = data.materiales.find(x => parseInt(x.idMaterial) === parseInt(id));
-            if (!m) return;
+            if (!data.ok) return;
+            const m = data.material;
             Swal.fire({
                 title: m.titulo,
                 html: `
                     <table style="width:100%;text-align:left;font-size:13px;border-collapse:collapse;">
-                        <tr><td style="color:#888;padding:5px 4px;width:45%;">Autor</td>            <td><b>${m.autor}</b></td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Editorial</td>                  <td>${m.editorial}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">ISBN</td>                       <td>${m.isbn || '—'}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Tipo</td>                       <td>${m.tipoMaterial}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Clasificación</td>              <td>${m.clasificacion || '—'}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Edición</td>                    <td>${m.edicion || '—'}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Año publicación</td>            <td>${m.anioPublicacion || '—'}</td></tr>
-                        <tr><td style="color:#888;padding:5px 4px;">Total ejemplares</td>           <td>${m.totalEjemplares}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;width:45%;">Autor</td><td><b>${m.autor}</b></td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Editorial</td><td>${m.editorial}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">ISBN</td><td>${m.isbn || '—'}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Tipo</td><td>${m.tipoMaterial}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Clasificación</td><td>${m.clasificacion || '—'}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Edición</td><td>${m.edicion || '—'}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Año publicación</td><td>${m.anioPublicacion || '—'}</td></tr>
+                        <tr><td style="color:#888;padding:5px 4px;">Total ejemplares</td><td>${m.totalEjemplares}</td></tr>
                         <tr><td style="color:#888;padding:5px 4px;">Disponibles</td>
                             <td><b style="color:${parseInt(m.disponibles) > 0 ? '#27500a' : '#e24b4a'}">${m.disponibles}</b></td></tr>
                         <tr><td style="color:#888;padding:5px 4px;">Prestable</td>

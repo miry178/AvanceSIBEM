@@ -2,14 +2,16 @@
 $conn = new mysqli("localhost", "root", "5775", "biblioteca");
 if ($conn->connect_error) die("Error de conexión: " . $conn->connect_error);
 
-$areas    = $conn->query("SELECT * FROM Area");
-$carreras = $conn->query("SELECT * FROM Carrera");
-$tipos    = $conn->query("SELECT * FROM TipoMaterial");
+$areas       = $conn->query("SELECT * FROM Area");
+$carreras    = $conn->query("SELECT * FROM Carrera");
+$tipos       = $conn->query("SELECT * FROM TipoMaterial");
+$editoriales = $conn->query("SELECT * FROM Editorial ORDER BY nombre");
 
 // Guardar resultados en arrays para usarlos en JS y PHP
-$areasArr    = $areas->fetch_all(MYSQLI_ASSOC);
-$carrerasArr = $carreras->fetch_all(MYSQLI_ASSOC);
-$tiposArr    = $tipos->fetch_all(MYSQLI_ASSOC);
+$areasArr       = $areas->fetch_all(MYSQLI_ASSOC);
+$carrerasArr    = $carreras->fetch_all(MYSQLI_ASSOC);
+$tiposArr       = $tipos->fetch_all(MYSQLI_ASSOC);
+$editorialesArr = $editoriales->fetch_all(MYSQLI_ASSOC);
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -65,7 +67,12 @@ $conn->close();
         <div class="row g-3 mb-3">
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Editorial</label>
-                <input type="text" name="editorial" class="form-control" placeholder="Editorial">
+                <select name="idEditorial" class="form-select">
+                    <option value="">Seleccione la editorial</option>
+                    <?php foreach ($editorialesArr as $e): ?>
+                        <option value="<?= $e['idEditorial'] ?>"><?= htmlspecialchars($e['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Edición</label>

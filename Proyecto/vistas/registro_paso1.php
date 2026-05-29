@@ -8,7 +8,7 @@ if($error === '1'){
 }
 if($error === '2'){
     echo '<div class="alert alert-warning text-center" role="alert">
-            <i class="bi bi-exclamation-circle-fill me-2"></i>Este correo ya tiene una cuenta activa. Inicia sesión.
+            <i class="bi bi-exclamation-circle-fill me-2"></i>Este correo ya tiene una cuenta activa. <a href="../index.php">Inicia sesión</a> o usa <a href="registro_paso1.php">¿Olvidó su contraseña?</a>
           </div>';
 }
 if($error === '3'){

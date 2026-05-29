@@ -1,38 +1,39 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
+header('Content-Type: application/json');
+require_once '../../bd/conexion.php';
 
 $id = $_GET['id'] ?? '';
-if ($id === '') { echo json_encode(['error' => 'ID vacío']); exit; }
+if ($id === '') { echo json_encode(['encontrado' => false]); exit; }
 
-$stmt = $conn->prepare("
-    SELECT 
-        u.nombre, 
-        u.correoInst, 
-        tp.descripcion  AS tipoPersona,
-        rp.diasPrestamo AS diasPrestamo
-    FROM Usuario u
-    LEFT JOIN RelTipoPersona rtp ON u.idUsuario      = rtp.idUsuario
-    LEFT JOIN TipoPersona tp     ON rtp.idTipoPersona = tp.idTipoPersona
-    LEFT JOIN ReglasPrestamo rp  ON rtp.idTipoPersona = rp.idTipoPersona
-    WHERE u.idUsuario = ?
-    LIMIT 1
-");
-$stmt->bind_param("s", $id);
-$stmt->execute();
-$resultado = $stmt->get_result();
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            u.nombre,
+            u.correoInst,
+            r.descripcion   AS tipoPersona,
+            COALESCE(rp.diasPrestamo, 2) AS diasPrestamo
+        FROM Usuario u
+        JOIN RelRol rr          ON u.idUsuario = rr.idUsuario
+        JOIN Rol r              ON rr.idRol    = r.idRol
+        LEFT JOIN ReglasPrestamo rp ON rr.idRol = rp.idRol
+        WHERE u.idUsuario = ?
+        ORDER BY rp.diasPrestamo DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$id]);
+    $row = $stmt->fetch();
 
-if ($resultado->num_rows > 0) {
-    $row = $resultado->fetch_assoc();
-    echo json_encode([
-        'encontrado'   => true,
-        'nombre'       => $row['nombre'],
-        'correo'       => $row['correoInst'],
-        'tipoPersona'  => $row['tipoPersona']  ?? 'Sin tipo asignado',
-        'diasPrestamo' => $row['diasPrestamo'] ?? 0
-    ]);
-} else {
-    echo json_encode(['encontrado' => false]);
+    if ($row) {
+        echo json_encode([
+            'encontrado'   => true,
+            'nombre'       => $row['nombre'],
+            'correo'       => $row['correoInst'],
+            'tipoPersona'  => $row['tipoPersona']  ?? 'Sin tipo',
+            'diasPrestamo' => $row['diasPrestamo'] ?? 0
+        ]);
+    } else {
+        echo json_encode(['encontrado' => false]);
+    }
+} catch (Exception $e) {
+    echo json_encode(['encontrado' => false, 'error' => $e->getMessage()]);
 }
-
-$conn->close();
-?>

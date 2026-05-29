@@ -26,7 +26,6 @@ if((string)$codigoIngresado !== (string)$_SESSION['codigo_verificacion']){
 
 // ---- 3. Código correcto ----
 $_SESSION['correo_verificado'] = $_SESSION['correo_verificacion'];
-
 unset($_SESSION['correo_verificacion']);
 unset($_SESSION['codigo_verificacion']);
 unset($_SESSION['codigo_expiracion']);

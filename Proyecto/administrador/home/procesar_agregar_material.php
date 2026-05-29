@@ -8,7 +8,7 @@ if ($conn->connect_error) {
 $titulo          = trim($_POST['titulo']          ?? '');
 $autor           = trim($_POST['autor']           ?? '');
 $anioPublicacion = trim($_POST['anioPublicacion'] ?? '');
-$editorial       = trim($_POST['editorial']       ?? '');
+$idEditorial     = trim($_POST['idEditorial']     ?? '') ?: null;
 $edicion         = trim($_POST['edicion']         ?? '');
 $idTipoMaterial  = trim($_POST['idTipoMaterial']  ?? '');
 
@@ -35,13 +35,13 @@ if ($ejemplares < 1) {
 // Insertar en Material
 $stmt = $conn->prepare("
     INSERT INTO Material 
-        (titulo, autor, isbn, anioPublicacion, editorial, edicion, idTipoMaterial, idArea, idCarrera, esPrestable)
+        (titulo, autor, isbn, anioPublicacion, idEditorial, edicion, idTipoMaterial, idArea, idCarrera, esPrestable)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 $stmt->bind_param(
-    "ssssssiiss",
+    "ssssisiiss",
     $titulo, $autor, $isbn, $anioPublicacion,
-    $editorial, $edicion, $idTipoMaterial,
+    $idEditorial, $edicion, $idTipoMaterial,
     $idArea, $idCarrera, $esPrestable
 );
 

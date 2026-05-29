@@ -69,7 +69,7 @@
 .av-4 { background: #e6f1fb; color: #0c447c; }
 .av-5 { background: #faeeda; color: #633806; }
 
-.rol-info {}
+.rol-info { flex: 1; display: flex; flex-direction: column; }
 .rol-nombre {
     font-size: 12px;
     font-weight: 500;
@@ -225,16 +225,18 @@
 
 /* ── Botones (mismos que el sistema) ── */
 .btn-nuevo-rol {
-    padding: 4px 10px;
-    background: #2d6a2d;
+    background: #1f4d1f;
+    color: #fff;
     border: none;
     border-radius: 6px;
-    font-size: 11px;
-    color: #fff;
+    padding: 7px 14px;
+    font-size: 12px;
     cursor: pointer;
+    white-space: nowrap;
     font-family: inherit;
 }
 .btn-nuevo-rol:hover { background: #1f4d1f; }
+
 
 .btn-guardar {
     padding: 6px 14px;

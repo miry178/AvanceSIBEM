@@ -1,39 +1,70 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) {
-    die("Error de conexión: " . $conn->connect_error);
+header('Content-Type: application/json');
+session_start();
+require_once '../../bd/conexion.php';
+
+if (!isset($_SESSION['idUsuario'])) {
+    echo json_encode(['ok' => false, 'error' => 'No autorizado']);
+    exit;
 }
 
-$idPrestamo = trim($_POST['idPrestamo'] ?? '');
+$idPrestamo = intval($_POST['idPrestamo'] ?? 0);
 
 if (!$idPrestamo) {
-    header("Location: prestamos.php?error=campos_vacios");
+    echo json_encode(['ok' => false, 'error' => 'ID inválido']);
     exit;
 }
 
-// Obtener el idEjemplar del préstamo
-$stmt = $conn->prepare("SELECT idEjemplar FROM Prestamo WHERE idPrestamo = ?");
-$stmt->bind_param("i", $idPrestamo);
-$stmt->execute();
-$prestamo = $stmt->get_result()->fetch_assoc();
+try {
+    // Obtener datos del préstamo
+    $stmt = $pdo->prepare("
+        SELECT p.idEjemplar, p.fechaDevolucion, p.estado,
+               rp.precioMulta
+        FROM Prestamo p
+        JOIN Usuario u ON p.idUsuario = u.idUsuario
+        JOIN RelRol rr ON u.idUsuario = rr.idUsuario
+        JOIN ReglasPrestamo rp ON rr.idRol = rp.idRol
+        WHERE p.idPrestamo = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$idPrestamo]);
+    $prestamo = $stmt->fetch();
 
-if (!$prestamo) {
-    header("Location: prestamos.php?error=no_encontrado");
-    exit;
+    if (!$prestamo) {
+        echo json_encode(['ok' => false, 'error' => 'Préstamo no encontrado']);
+        exit;
+    }
+
+    $pdo->beginTransaction();
+
+    // Marcar préstamo como devuelto
+    $pdo->prepare("UPDATE Prestamo SET estado = 'devuelto' WHERE idPrestamo = ?")
+        ->execute([$idPrestamo]);
+
+    // Marcar ejemplar como disponible
+    $pdo->prepare("UPDATE Ejemplar SET estado = 'disponible' WHERE idEjemplar = ?")
+        ->execute([$prestamo['idEjemplar']]);
+
+    // Si estaba vencido — generar multa
+    if ($prestamo['estado'] === 'vencido') {
+        $fechaDevolucion = new DateTime($prestamo['fechaDevolucion']);
+        $hoy             = new DateTime();
+        $diasRetraso     = $hoy->diff($fechaDevolucion)->days;
+        $precioMulta     = $prestamo['precioMulta'] ?? 25.00;
+        $monto           = $diasRetraso * $precioMulta;
+
+        if ($monto > 0) {
+            $pdo->prepare("
+                INSERT INTO Multa (idPrestamo, monto, pagada)
+                VALUES (?, ?, 'no')
+            ")->execute([$idPrestamo, $monto]);
+        }
+    }
+
+    $pdo->commit();
+    echo json_encode(['ok' => true, 'mensaje' => 'Préstamo registrado como devuelto correctamente']);
+
+} catch (Exception $e) {
+    $pdo->rollBack();
+    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
 }
-
-$idEjemplar = $prestamo['idEjemplar'];
-
-// Marcar préstamo como devuelto
-$upd1 = $conn->prepare("UPDATE Prestamo SET estado = 'devuelto' WHERE idPrestamo = ?");
-$upd1->bind_param("i", $idPrestamo);
-$upd1->execute();
-
-// Marcar ejemplar como disponible
-$upd2 = $conn->prepare("UPDATE Ejemplar SET estado = 'disponible' WHERE idEjemplar = ?");
-$upd2->bind_param("i", $idEjemplar);
-$upd2->execute();
-
-$conn->close();
-header("Location: prestamos.php?exito=1");
-exit;

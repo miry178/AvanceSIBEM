@@ -1,5 +1,4 @@
 <?php
-// Conexión
 session_start();
 require_once '../../bd/conexion.php';
 
@@ -10,13 +9,26 @@ if (!isset($_SESSION['idUsuario'])) {
 
 $puedeAgregar  = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'agregar');
 $puedeDevolver = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'devolver');
-// Contadores para las tarjetas
+
 $totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo'")->fetch_assoc()['c'];
 $totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido'")->fetch_assoc()['c'];
 $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
 
-// Consulta principal usando la vista
+// Actualizar préstamos vencidos automáticamente
+$conn->query("
+    UPDATE Prestamo 
+    SET estado = 'vencido' 
+    WHERE estado = 'activo' 
+    AND fechaDevolucion < NOW()
+");
+
 $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto'");
+$listaPrestamos = [];
+if ($prestamos) {
+    while ($row = $prestamos->fetch_assoc()) {
+        $listaPrestamos[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -24,14 +36,14 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIBEM - Préstamos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"> 
     <link rel="stylesheet" href="../home/diseno.css">
-    <link rel="stylesheet" href="diseno-prestamo.css">
+    <link rel="stylesheet" href="diseno-prestamo.css?v=2">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 
 <div class="wrapper">
-
     <aside class="sidebar">
         <div class="sidebar-logo">
             <div class="logo-icon">
@@ -52,7 +64,7 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
                 <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
                 Usuarios
             </button>
-            <button class="nav-btn">
+            <button class="nav-btn" onclick="location.href='../adeudos/adeudos.php'">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
                 Adeudos
             </button>
@@ -63,8 +75,7 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
             <button class="nav-btn" onclick="location.href='../roles/roles.php'">
                 <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
                 Roles
-            </button> 
-            
+            </button>
         </nav>
         <div class="sidebar-footer">
             <div class="user-row">
@@ -74,9 +85,7 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
                     <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
                 </div>
                 <button class="logout-btn" onclick="location.href='../../index.php'" title="Cerrar sesión">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                    </svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
             </div>
         </div>
@@ -84,126 +93,120 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
 
     <main class="main-area">
         <div class="topbar">
-            <img src="../img/Logo.png" alt="Logo ITSCC" height=50>
+            <img src="../img/Logo.png" alt="Logo ITSCC" height="50">
             <span class="inst-name">Instituto Tecnológico Superior de Ciudad Constitución</span>
         </div>
 
         <div class="content-area">
 
-            <!-- Mensajes de éxito o error -->
-            <?php if (isset($_GET['exito'])): ?>
-                <div class="alert alert-success alert-dismissible fade show">
-                    Préstamo registrado correctamente
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <!-- Métricas -->
+             <!-- Métricas -->
+<div class="metricas">
+    <div class="metrica-card">
+        <div class="metrica-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#27500a"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+        </div>
+        <div>
+            <div class="metrica-label">Préstamos Activos</div>
+            <div class="metrica-num"><?= $totalActivos ?></div>
+        </div>
+    </div>
+    <div class="metrica-card">
+        <div class="metrica-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#f5a623"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        </div>
+        <div>
+            <div class="metrica-label">Préstamos Vencidos</div>
+            <div class="metrica-num"><?= $totalVencidos ?></div>
+        </div>
+    </div>
+    <div class="metrica-card">
+        <div class="metrica-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="#633806"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        </div>
+        <div>
+            <div class="metrica-label">Por vencer</div>
+            <div class="metrica-num"><?= $totalPorVencer ?></div>
+        </div>
+    </div>
+</div>
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                    <input type="text" id="searchInput" placeholder="Buscar por título, correo..." oninput="filtrar()">
                 </div>
-            <?php elseif (isset($_GET['error'])): ?>
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <?php
-                        $errores = [
-                            'campos_vacios'  => 'Faltan campos obligatorios',
-                            'no_disponible'  => 'El ejemplar ya no está disponible',
-                            'insert_fallido' => 'Error al guardar el préstamo'
-                        ];
-                        echo $errores[$_GET['error']] ?? 'Error desconocido';
-                    ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-
-            <!-- Tarjetas resumen -->
-            <div class="prestamo-cards">
-                <div class="prestamo-card">
-                    <div>
-                        <div class="prestamo-card-label">Préstamos Activos</div>
-                        <div class="prestamo-card-num"><?= $totalActivos ?></div>
-                    </div>
-                    <span class="prestamo-card-icon">🕐</span>
-                </div>
-                <div class="prestamo-card">
-                    <div>
-                        <div class="prestamo-card-label">Préstamos Vencidos</div>
-                        <div class="prestamo-card-num"><?= $totalVencidos ?></div>
-                    </div>
-                    <span class="prestamo-card-icon">⚠️</span>
-                </div>
-                <div class="prestamo-card">
-                    <div>
-                        <div class="prestamo-card-label">Por vencer</div>
-                        <div class="prestamo-card-num"><?= $totalPorVencer ?></div>
-                    </div>
-                    <span class="prestamo-card-icon">📅</span>
-                </div>
-            <div class="prestamo-card-btn">
+                <select class="fsel" id="filtroEstado" onchange="filtrar()">
+                    <option value="">Todos los estados</option>
+                    <option value="activo">Activo</option>
+                    <option value="vencido">Vencido</option>
+                </select>
                 <?php if ($puedeAgregar): ?>
-                <button class="add-btn" data-bs-toggle="modal" data-bs-target="#modalAgregarPrestamo">
-                    Agregar Préstamo
-                </button>
+                    <button class="btn-add" data-bs-toggle="modal" data-bs-target="#modalAgregarPrestamo">+ Agregar Préstamo</button>
                 <?php endif; ?>
             </div>
-            </div>
+
+            <div class="res-count" id="resCount"></div>
 
             <!-- Tabla -->
-            <div class="tabla-prestamos">
-                <h5 class="fw-semibold mb-3">Préstamos Activos</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Título</th>
-                                <th>Correo</th>
-                                <th>Fecha de préstamo</th>
-                                <th>Fecha de devolución</th>
-                                <th>Estado</th>
-                                <th>Tiempo restante</th>
-                                <?php if ($puedeDevolver): ?><th>Acción</th><?php endif; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if ($prestamos && $prestamos->num_rows > 0): ?>
-                                <?php while ($row = $prestamos->fetch_assoc()): ?>
-                                    <?php
-                                        $dias = (int)$row['diasRestantes'];
-                                        if ($row['estado'] === 'vencido') {
-                                            $badge  = '<span class="badge-vencido">Vencido</span>';
-                                            $tiempo = '<span class="text-danger fw-semibold">' . abs($dias) . ' días ven...</span>';
-                                        } elseif ($dias <= 1) {
-                                            $badge  = '<span class="badge-por-vencer">Por vencer</span>';
-                                            $tiempo = '<span class="text-warning fw-semibold">Vence hoy</span>';
-                                        } else {
-                                            $badge  = '<span class="badge-activo">Activo</span>';
-                                            $tiempo = '<span class="text-success">' . $dias . ' días res...</span>';
-                                        }
-                                        $titulo = strlen($row['titulo']) > 25 ? substr($row['titulo'], 0, 25) . '...' : $row['titulo'];
-                                        $correo = strlen($row['correoInst']) > 20 ? substr($row['correoInst'], 0, 20) . '...' : $row['correoInst'];
-                                    ?>
-                                    <tr>
-                                        <td title="<?= htmlspecialchars($row['titulo']) ?>"><?= htmlspecialchars($titulo) ?></td>
-                                        <td title="<?= htmlspecialchars($row['correoInst']) ?>"><?= htmlspecialchars($correo) ?></td>
-                                        <td><?= date('Y-m-d', strtotime($row['fechaPrestamo'])) ?></td>
-                                        <td><?= date('Y-m-d', strtotime($row['fechaDevolucion'])) ?></td>
-                                        <td><?= $badge ?></td>
-                                        <td><?= $tiempo ?></td>
-                                        <td>
-                                            <?php if ($puedeDevolver): ?>
-                                            <td>
-                                                <form method="POST" action="devolver_prestamo.php" style="display:inline">
-                                                    <input type="hidden" name="idPrestamo" value="<?= $row['idPrestamo'] ?>">
-                                                    <button type="submit" class="btn-devolver">Devolver</button>
-                                                </form>
-                                            </td>
-                                            <?php endif; ?>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
-                                        No hay préstamos registrados
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="tw">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Título</th>
+                            <th>Correo</th>
+                            <th>Fecha de préstamo</th>
+                            <th>Fecha de devolución</th>
+                            <th>Estado</th>
+                            <th>Tiempo restante</th>
+                            <?php if ($puedeDevolver): ?><th>Acción</th><?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaBody">
+                        <?php if (empty($listaPrestamos)): ?>
+                            <tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No hay préstamos registrados</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($listaPrestamos as $row):
+                                $dias = (int)$row['diasRestantes'];
+                                if ($row['estado'] === 'vencido') {
+                                    $badge  = '<span class="badge-vencido">Vencido</span>';
+                                    $tiempo = '<span style="color:#e24b4a;font-weight:600;">' . abs($dias) . ' días ven...</span>';
+                                } elseif ($dias <= 1) {
+                                    $badge  = '<span class="badge-por-vencer">Por vencer</span>';
+                                    $tiempo = '<span style="color:#ba7517;font-weight:600;">Vence hoy</span>';
+                                } else {
+                                    $badge  = '<span class="badge-activo">Activo</span>';
+                                    $tiempo = '<span style="color:#27500a;">' . $dias . ' días res...</span>';
+                                }
+                                $titulo = strlen($row['titulo']) > 25 ? substr($row['titulo'], 0, 25) . '...' : $row['titulo'];
+                                $correo = strlen($row['correoInst']) > 20 ? substr($row['correoInst'], 0, 20) . '...' : $row['correoInst'];
+                            ?>
+                            <tr data-estado="<?= $row['estado'] ?>" data-titulo="<?= strtolower($row['titulo']) ?>" data-correo="<?= strtolower($row['correoInst']) ?>">
+                                <td style="font-weight:500;" title="<?= htmlspecialchars($row['titulo']) ?>"><?= htmlspecialchars($titulo) ?></td>
+                                <td style="font-size:11px;color:#888;" title="<?= htmlspecialchars($row['correoInst']) ?>"><?= htmlspecialchars($correo) ?></td>
+                                <td><?= date('Y-m-d', strtotime($row['fechaPrestamo'])) ?></td>
+                                <td><?= date('Y-m-d', strtotime($row['fechaDevolucion'])) ?></td>
+                                <td><?= $badge ?></td>
+                                <td><?= $tiempo ?></td>
+                                <?php if ($puedeDevolver): ?>
+                                    <td>
+                                        <button class="btn-devolver" onclick="abrirModalDevolver(
+                                        '<?= $row['idPrestamo'] ?>',
+                                        '<?= htmlspecialchars(addslashes($row['titulo'])) ?>',
+                                        '<?= htmlspecialchars(addslashes($row['correoInst'])) ?>',
+                                        '<?= htmlspecialchars(addslashes($row['nombre'] ?? '')) ?>',
+                                        '<?= date('Y-m-d', strtotime($row['fechaPrestamo'])) ?>',
+                                        '<?= date('Y-m-d', strtotime($row['fechaDevolucion'])) ?>',
+                                        '<?= $row['estado'] ?>',
+                                        '<?= $row['diasRestantes'] ?>'
+                                        )">Devolver</button>
+                                        </td>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
 
         </div>
@@ -220,79 +223,55 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
             </div>
             <div class="modal-body">
                 <form method="POST" action="procesar_prestamo.php">
-
-                    <!-- SECCIÓN USUARIO -->
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="float-none w-auto px-2 fs-6 text-muted">Datos del Usuario</legend>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Número de Cuenta <span class="text-danger">*</span>
-                                </label>
-                                <!-- id="inputIdUsuario" y onblur para disparar el AJAX -->
-                                <input type="text" id="inputIdUsuario" name="idUsuario"
-                                       class="form-control" placeholder="RFC o No. Control"
-                                       onblur="buscarUsuario()" required>
+                                <label class="form-label fw-semibold">Número de Cuenta <span class="text-danger">*</span></label>
+                                <input type="text" id="inputIdUsuario" name="idUsuario" class="form-control" placeholder="RFC o No. Control" onblur="buscarUsuario()" required>
                                 <small id="msgUsuario" class="text-danger d-none">Usuario no encontrado</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Tipo de usuario</label>
-                                <!-- readonly: se llena automáticamente con el AJAX -->
-                                <input type="text" id="inputTipoUsuario"
-                                       class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputTipoUsuario" class="form-control" placeholder="Se llena automáticamente" readonly>
                             </div>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre</label>
-                                <input type="text" id="inputNombre"
-                                       class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputNombre" class="form-control" placeholder="Se llena automáticamente" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Correo</label>
-                                <input type="text" id="inputCorreo"
-                                       class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputCorreo" class="form-control" placeholder="Se llena automáticamente" readonly>
                             </div>
                         </div>
                     </fieldset>
-
-                    <!-- SECCIÓN EJEMPLAR -->
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="float-none w-auto px-2 fs-6 text-muted">Datos del préstamo</legend>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Código del Ejemplar <span class="text-danger"></span>
-                                </label>
-                                <!-- id="inputCodigo" y onblur para disparar el AJAX -->
-                                <input type="text" id="inputCodigo" name="codigoEjemplar"
-                                       class="form-control" placeholder="Código del ejemplar"
-                                       onblur="buscarEjemplar()" required>
+                                <label class="form-label fw-semibold">Código del Ejemplar <span class="text-danger">*</span></label>
+                                <input type="text" id="inputCodigo" name="codigoEjemplar" class="form-control" placeholder="Código del ejemplar" onblur="buscarEjemplar()" required>
                                 <small id="msgEjemplar" class="text-danger d-none">Ejemplar no encontrado</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Título del libro</label>
-                                <input type="text" id="inputTitulo"
-                                       class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputTitulo" class="form-control" placeholder="Se llena automáticamente" readonly>
                             </div>
                         </div>
-                        <!-- Campo oculto con el idEjemplar real para enviarlo al procesar -->
                         <input type="hidden" id="inputIdEjemplar" name="idEjemplar">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Fecha de préstamo</label>
-                                <input type="date" name="fechaPrestamo" id="inputFechaPrestamo"
-                                       class="form-control" value="<?= date('Y-m-d') ?>">
+                                <input type="date" name="fechaPrestamo" id="inputFechaPrestamo" class="form-control" value="<?= date('Y-m-d') ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Fecha de devolución <span class="text-danger"></span>
-                                </label>
+                                <label class="form-label fw-semibold">Fecha de devolución <span class="text-danger">*</span></label>
                                 <input type="date" name="fechaDevolucion" class="form-control" required>
                             </div>
                         </div>
                     </fieldset>
-
                     <div class="d-flex justify-content-end gap-2">
                         <button type="submit" class="btn btn-success px-4">Agregar Préstamo</button>
                         <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">Cancelar</button>
@@ -303,15 +282,45 @@ $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuel
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+ <!-- MODAL - Devolver Préstamo -->
+<div class="mbg" id="mbgDevolver">
+    <div class="modal-sibem modal-sm">
+        <div class="mh">
+            <h2>Confirmar devolución</h2>
+            <button class="mx" onclick="cerrarModalDevolver()">&times;</button>
+        </div>
+        <div id="detalleDevolver"></div>
+        <div class="form-btns">
+            <button class="btn-yel" onclick="cerrarModalDevolver()">Cancelar</button>
+            <button class="btn-grn" onclick="confirmarDevolucion()">Confirmar devolución</button>
+        </div>
+    </div>
+</div>
 
-// ── AJAX: buscar usuario por idUsuario ──
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+function filtrar() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const e = document.getElementById('filtroEstado').value.toLowerCase();
+    const filas = document.querySelectorAll('#tablaBody tr[data-estado]');
+    let count = 0;
+    filas.forEach(tr => {
+        const titulo = tr.dataset.titulo || '';
+        const correo = tr.dataset.correo || '';
+        const estado = tr.dataset.estado || '';
+        const okQ = !q || titulo.includes(q) || correo.includes(q);
+        const okE = !e || estado === e;
+        tr.style.display = (okQ && okE) ? '' : 'none';
+        if (okQ && okE) count++;
+    });
+    document.getElementById('resCount').textContent = count + ' préstamo' + (count !== 1 ? 's' : '') + ' encontrado' + (count !== 1 ? 's' : '');
+}
+
 function buscarUsuario() {
     const id  = document.getElementById('inputIdUsuario').value.trim();
     const msg = document.getElementById('msgUsuario');
     if (id === '') return;
-
     fetch('buscar_usuario.php?id=' + encodeURIComponent(id))
         .then(res => res.json())
         .then(data => {
@@ -320,15 +329,11 @@ function buscarUsuario() {
                 document.getElementById('inputCorreo').value      = data.correo;
                 document.getElementById('inputTipoUsuario').value = data.tipoPersona;
                 msg.classList.add('d-none');
-
-                // Calcular fecha de devolución automáticamente
-                if (data.diasPrestamo > 0) {
-                    const hoy = new Date();
-                    hoy.setDate(hoy.getDate() + data.diasPrestamo);
-                    // Formatear a YYYY-MM-DD que necesita el input date
-                    const fechaDevolucion = hoy.toISOString().split('T')[0];
-                    document.querySelector('[name="fechaDevolucion"]').value = fechaDevolucion;
-                }
+            if (data.diasPrestamo > 0) {
+                const hoy = new Date();
+                hoy.setDate(hoy.getDate() + parseInt(data.diasPrestamo));
+                document.querySelector('[name="fechaDevolucion"]').value = hoy.toISOString().split('T')[0];
+            }
             } else {
                 document.getElementById('inputNombre').value      = '';
                 document.getElementById('inputCorreo').value      = '';
@@ -339,12 +344,10 @@ function buscarUsuario() {
         });
 }
 
-// ── AJAX: buscar ejemplar por código ──
 function buscarEjemplar() {
     const codigo = document.getElementById('inputCodigo').value.trim();
     const msg    = document.getElementById('msgEjemplar');
     if (codigo === '') return;
-
     fetch('buscar_ejemplar.php?codigo=' + encodeURIComponent(codigo))
         .then(res => res.json())
         .then(data => {
@@ -355,13 +358,73 @@ function buscarEjemplar() {
             } else {
                 document.getElementById('inputTitulo').value     = '';
                 document.getElementById('inputIdEjemplar').value = '';
-                msg.textContent = data.encontrado
-                    ? 'El ejemplar "' + data.titulo + '" ya está prestado'
-                    : 'Ejemplar no encontrado';
+                msg.textContent = data.encontrado ? 'El ejemplar "' + data.titulo + '" ya está prestado' : 'Ejemplar no encontrado';
                 msg.classList.remove('d-none');
             }
         });
 }
+
+// ... las funciones que ya tienes (filtrar, buscarUsuario, buscarEjemplar) ...
+
+document.addEventListener('DOMContentLoaded', () => {
+    const count = document.querySelectorAll('#tablaBody tr[data-estado]').length;
+    document.getElementById('resCount').textContent = count + ' préstamo' + (count !== 1 ? 's' : '') + ' encontrado' + (count !== 1 ? 's' : '');
+});
+
+// ── Modal devolver ──────────────────────────────────────────────
+let idPrestamoActual = null;
+
+function abrirModalDevolver(id, titulo, correo, nombre, fechaPrestamo, fechaDevolucion, estado, dias) {
+    idPrestamoActual = id;
+    const diasNum = parseInt(dias);
+    let estadoHtml = '';
+    if (estado === 'vencido') {
+        estadoHtml = `<span class="badge-vencido">Vencido — ${Math.abs(diasNum)} días de retraso</span>`;
+    } else if (diasNum <= 1) {
+        estadoHtml = `<span class="badge-por-vencer">Vence hoy</span>`;
+    } else {
+        estadoHtml = `<span class="badge-activo">Activo — ${diasNum} días restantes</span>`;
+    }
+
+    document.getElementById('detalleDevolver').innerHTML = `
+        <div class="mf"><span class="mfk">Título</span><span class="mfv">${titulo}</span></div>
+        <div class="mf"><span class="mfk">Usuario</span><span class="mfv">${nombre}</span></div>
+        <div class="mf"><span class="mfk">Correo</span><span class="mfv">${correo}</span></div>
+        <div class="mf"><span class="mfk">Fecha préstamo</span><span class="mfv">${fechaPrestamo}</span></div>
+        <div class="mf"><span class="mfk">Fecha devolución</span><span class="mfv">${fechaDevolucion}</span></div>
+        <div class="mf"><span class="mfk">Estado</span><span class="mfv">${estadoHtml}</span></div>
+    `;
+    document.getElementById('mbgDevolver').classList.add('open');
+}
+
+function cerrarModalDevolver() {
+    document.getElementById('mbgDevolver').classList.remove('open');
+    idPrestamoActual = null;
+}
+
+function confirmarDevolucion() {
+    if (!idPrestamoActual) return;
+    const fd = new FormData();
+    fd.append('idPrestamo', idPrestamoActual);
+    fetch('devolver_prestamo.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            cerrarModalDevolver();
+            if (data.ok) {
+                Swal.fire({ icon: 'success', title: '¡Devuelto!', text: data.mensaje, confirmButtonColor: '#2d6a2d', timer: 1800, showConfirmButton: false })
+                .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#dc3545' });
+            }
+        });
+}
+
+document.getElementById('mbgDevolver').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalDevolver();
+});
+</script>
+
+
 
 </script>
 </body>

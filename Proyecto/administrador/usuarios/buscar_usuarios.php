@@ -1,11 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) {
-    echo json_encode(['ok' => false, 'error' => 'Error de conexión']);
-    exit;
-}
+// Conectamos a la base de datos
+require_once '../../bd/conexion.php';
 
 $pdo = new PDO("mysql:host=localhost;dbname=biblioteca;charset=utf8mb4", "root", "5775", [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

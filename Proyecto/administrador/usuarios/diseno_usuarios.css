@@ -5,13 +5,24 @@
 .search-box input { border:none; outline:none; font-size:13px; width:100%; background:transparent; }
 .fsel { padding:7px 10px; border:1.5px solid #ccc; border-radius:6px; font-size:12px; color:#555; background:#fff; outline:none; }
 .fsel:focus { border-color:#b8b800; }
-.btn-add { padding:7px 14px; background:#2d6a2d; border:none; border-radius:6px; font-size:12px; color:#fff; cursor:pointer; white-space:nowrap; }
-.btn-add:hover { background:#1f4d1f; }
+
+.btn-add {
+    background: #1f4d1f;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+}
+.btn-add:hover { background: #1f4d1f; }
 
 /* tabla */
 .tw { background:#fff; border:1.5px solid #e0e0c0; border-radius:8px; overflow:hidden; }
-.tw table { width:100%; border-collapse:collapse; font-size:12px; }
-.tw thead tr { background:#f9f9f0; }
+.tw table { width:100%; border-collapse:collapse; font-size:13px; }
+.tw thead tr  {background: #fafaf0; border-bottom: 1.5px solid #e8e8d0; height: 45px; }
 .tw th { padding:9px 12px; text-align:left; font-weight:500; color:#555; font-size:11px; border-bottom:1.5px solid #e0e0c0; }
 .tw td { padding:9px 12px; color:#333; border-bottom:.5px solid #f0f0f0; vertical-align:middle; }
 .tw tr.clickable:hover td { background:#fffdf5; cursor:pointer; }

@@ -1,165 +1,233 @@
-/* =============================================
-   diseno_adeudos.css — Estilos del widget adeudos
-   ============================================= */
+/* ══════════════════════════════════════
+   diseno-adeudos.css
+   Estilo idéntico a tabla de usuarios
+══════════════════════════════════════ */
 
-.aw-metricas {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin-bottom: 18px;
-}
-.aw-card {
+/* ── Panel contenedor ── */
+.adeudos-panel {
     background: #fff;
-    border: 1.5px solid #c8e6a0;
     border-radius: 10px;
-    padding: 16px 20px;
+    border: 1px solid #e0eecc;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+/* ── Toolbar ── */
+.adeudos-toolbar {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
+    padding: 14px 18px;
+    flex-wrap: wrap;
 }
-.aw-icon {
-    width: 44px; height: 44px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-}
-.aw-icon.rojo  { background: #fcebeb; color: #a32d2d; }
-.aw-icon.ambar { background: #faeeda; color: #854f0b; }
-.aw-icon.verde { background: #eaf3de; color: #3b6d11; }
-.aw-card-label { font-size: .78rem; color: #666; margin-bottom: 3px; }
-.aw-card-valor { font-size: 1.5rem; font-weight: 600; color: #1a1a00; line-height: 1; }
 
-.aw-panel {
-    background: #fff;
-    border: 1.5px solid #c8e6a0;
-    border-radius: 10px;
-    overflow: hidden;
-}
-.aw-panel-title {
-    padding: 14px 18px 10px;
-    font-size: .97rem;
-    font-weight: 600;
-    color: #1a1a00;
-    border-bottom: 1px solid #e8f0d0;
+.adeudos-search {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.aw-filtros {
-    display: flex;
-    gap: 10px;
-    padding: 12px 18px;
-    border-bottom: 1px solid #f0f0e0;
-    align-items: center;
-}
-
-/* ✅ FIX PRINCIPAL: el SVG dentro del buscador no debe ser grande */
-.aw-sw {
-    flex: 1;
-    position: relative;
-}
-.aw-sw svg {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    width: 14px !important;   /* fuerza tamaño pequeño */
-    height: 14px !important;
-    pointer-events: none;
-}
-.aw-sw input {
-    width: 100%;
-    padding: 8px 12px 8px 32px;
-    border: 1px solid #d4e8a0;
-    border-radius: 6px;
-    font-size: .85rem;
-    outline: none;
-    font-family: inherit;
-    background: #f9fdf2;
-    transition: border-color .2s;
-}
-.aw-sw input:focus { border-color: #4a7c2e; }
-
-.aw-sel {
-    padding: 8px 10px;
-    border: 1px solid #d4e8a0;
-    border-radius: 6px;
-    font-size: .85rem;
-    font-family: inherit;
-    outline: none;
-    min-width: 160px;
-    background: #f9fdf2;
-    cursor: pointer;
-}
-
-/* Tabla */
-.aw-table { width: 100%; border-collapse: collapse; }
-.aw-table thead tr {
-    background: #f5faea;
-    border-bottom: 1.5px solid #ddeead;
-}
-.aw-table th {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     padding: 9px 14px;
-    font-size: .78rem;
-    font-weight: 600;
-    color: #4a7c2e;
+    min-width: 200px;
+}
+.adeudos-search svg {
+    width: 15px;
+    height: 15px;
+    fill: #bbb;
+    flex-shrink: 0;
+}
+.adeudos-search input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: .875rem;
+    color: #333;
+    width: 100%;
+    font-family: inherit;
+}
+.adeudos-search input::placeholder { color: #bbb; }
+
+.adeudos-select {
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: .875rem;
+    font-family: inherit;
+    outline: none;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    min-width: 150px;
+}
+.adeudos-select:focus { border-color: #4a7c2e; }
+
+/* ── Contador ── */
+.adeudos-count {
+    padding: 4px 18px 10px;
+    font-size: .8rem;
+    color: #888;
+}
+
+/* ── Tabla ── */
+.adeudos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;        /* mismo tamaño que usuarios */
+}
+
+.adeudos-table thead tr {
+    background: #fafaf0 !important;
+    border-bottom: 1.5px solid #e8e8d0 !important;
+    height: 45px !important; 
+
+    
+}
+.adeudos-table th {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #555;
     text-align: left;
     white-space: nowrap;
 }
-/* ✅ FIX: SVGs dentro de los th también deben ser pequeños */
-.aw-table th svg {
-    vertical-align: middle;
-    margin-right: 3px;
-    width: 11px !important;
-    height: 11px !important;
-}
-.aw-table tbody tr {
+
+.adeudos-table tbody tr {
     border-bottom: 1px solid #f5f5ea;
     transition: background .13s;
 }
-.aw-table tbody tr:hover { background: #fafff0; }
-.aw-table tbody tr:last-child { border-bottom: none; }
-.aw-table td {
-    padding: 10px 14px;
-    font-size: .85rem;
-    color: #1a1a1a;
+.adeudos-table tbody tr:hover { background: #fafff5; }
+.adeudos-table tbody tr:last-child { border-bottom: none; }
+
+.adeudos-table td {
+    padding: 16px 16px;
+    color: #333;
     vertical-align: middle;
-}
-.aw-empty {
-    text-align: center;
-    padding: 36px;
-    color: #aaa;
-    font-size: .88rem;
-}
-/* ✅ FIX: SVG del mensaje vacío también */
-.aw-empty svg {
-    width: 32px !important;
-    height: 32px !important;
-    opacity: .3;
-    display: block;
-    margin: 0 auto 6px;
+    font-size: 13px;
 }
 
-.aw-badge {
+.td-nombre  { font-weight: 500; }
+.td-control { color: #999; font-size: .82rem; }
+.td-monto   { font-weight: 600; }
+.td-empty   { text-align: center; padding: 40px; color: #aaa; font-size: .875rem; }
+
+/* ── Badge tipo (igual que usuarios: Alumno, Docente, Administrativo) ── */
+.badge-tipo-alumno {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 10px;
+    border-radius: 20px;
     font-size: .76rem;
     font-weight: 500;
-    border: 1.5px solid;
+    background: #e8f4fd;
+    color: #1a6fa8;
+    border: 1px solid #b8dcf5;
 }
-.aw-badge.pendiente { color: #a32d2d; border-color: #a32d2d; background: #fff5f5; }
-.aw-badge.pagado    { color: #1e7e34; border-color: #1e7e34; background: #f0fff4; }
-
-/* ✅ FIX: el SVG del título del panel tampoco debe heredar tamaño */
-.aw-panel-title svg {
-    width: 16px !important;
-    height: 16px !important;
-    flex-shrink: 0;
+.badge-tipo-docente {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #eee8fd;
+    color: #5a3ea8;
+    border: 1px solid #c8b8f5;
+}
+.badge-tipo-administrativo {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #fdf3e8;
+    color: #a86a1a;
+    border: 1px solid #f5d8b8;
+}
+.badge-tipo-otro {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #f1f1f1;
+    color: #555;
+    border: 1px solid #ddd;
 }
 
-@media (max-width: 700px) {
-    .aw-metricas { grid-template-columns: 1fr; }
+/* ── Badge estado (igual que usuarios: Activo/Inactivo) ── */
+.badge-pagado {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #eaf6ee;
+    color: #1e7e34;
+    border: 1px solid #a8d5b5;
+}
+.badge-pendiente {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #fff0f0;
+    color: #c0392b;
+    border: 1px solid #f5b7b1;
+}
+
+/* ── Botón Pagar (mismo estilo que Devolver en préstamos) ── */
+.btn-pagar {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #198754;
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+    font-family: inherit;
+}
+.btn-pagar:hover { background: #157347; }
+
+.sin-accion {
+    color: #ccc;
+    font-size: .85rem;
+    padding-left: 4px;
+}
+
+/* ── Tarjetas métricas ── */
+/* ── Métricas ── */
+.metricas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.metrica-card {
+    background: #fff;
+    border: 0.5px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.metrica-icon { font-size: 28px; }
+
+.metrica-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 2px;
+}
+
+.metrica-num {
+    font-size: 28px;
+    font-weight: 600;
+    color: #222;
 }
