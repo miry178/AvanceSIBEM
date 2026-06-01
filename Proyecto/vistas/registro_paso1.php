@@ -1,21 +1,8 @@
 <?php
 // Mensajes de error por parámetro GET
 $error = $_GET['error'] ?? '';
-if($error === '1'){
-    echo '<div class="alert alert-danger text-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>Este correo no está registrado en el sistema.
-          </div>';
-}
-if($error === '2'){
-    echo '<div class="alert alert-warning text-center" role="alert">
-            <i class="bi bi-exclamation-circle-fill me-2"></i>Este correo ya tiene una cuenta activa. <a href="../index.php">Inicia sesión</a> o usa <a href="registro_paso1.php">¿Olvidó su contraseña?</a>
-          </div>';
-}
-if($error === '3'){
-    echo '<div class="alert alert-danger text-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>Hubo un error al enviar el correo. Intenta de nuevo.
-          </div>';
-}
+$sinregistro = $_GET['sinregistro'] ?? '';
+
 ?>
 
 <!DOCTYPE html>
@@ -47,6 +34,27 @@ if($error === '3'){
 <body class="d-flex align-items-center justify-content-center">
 
     <main class="container py-4">
+
+    <?php if($error === '1'): ?>
+    <div class="alert alert-danger text-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Este correo no está registrado en el sistema.
+    </div>
+    <?php elseif($error === '2'): ?>
+    <div class="alert alert-warning text-center" role="alert">
+        <i class="bi bi-exclamation-circle-fill me-2"></i>Este correo ya tiene una cuenta activa. 
+        <a href="../index.php">Inicia sesión</a> o usa <a href="registro_paso1.php">¿Olvidó su contraseña?</a>
+    </div>
+    <?php elseif($error === '3'): ?>
+    <div class="alert alert-danger text-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Hubo un error al enviar el correo. Intenta de nuevo.
+    </div>
+    <?php elseif($sinregistro === '1'): ?>
+    <div class="alert alert-info text-center" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>Aún no tienes contraseña. Ingresa tu correo institucional para registrarte.
+    </div>
+    <?php endif; ?>
+
+
         <div class="row justify-content-center">
             <div class="col-12 col-md-8 col-lg-6 col-xl-5">
                 <div class="card border-0 shadow-sm">

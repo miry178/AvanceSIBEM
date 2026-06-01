@@ -46,6 +46,7 @@ try {
         ->execute([$prestamo['idEjemplar']]);
 
     // Si estaba vencido — generar multa
+// Si estaba vencido — generar multa solo si no existe ya
     if ($prestamo['estado'] === 'vencido') {
         $fechaDevolucion = new DateTime($prestamo['fechaDevolucion']);
         $hoy             = new DateTime();
@@ -54,10 +55,16 @@ try {
         $monto           = $diasRetraso * $precioMulta;
 
         if ($monto > 0) {
-            $pdo->prepare("
-                INSERT INTO Multa (idPrestamo, monto, pagada)
-                VALUES (?, ?, 'no')
-            ")->execute([$idPrestamo, $monto]);
+            // Verificar si ya existe multa para este préstamo
+            $existeMulta = $pdo->prepare("SELECT idMulta FROM Multa WHERE idPrestamo = ?");
+            $existeMulta->execute([$idPrestamo]);
+            
+            if (!$existeMulta->fetch()) {
+                $pdo->prepare("
+                    INSERT INTO Multa (idPrestamo, monto, pagada)
+                    VALUES (?, ?, 'no')
+                ")->execute([$idPrestamo, $monto]);
+            }
         }
     }
 

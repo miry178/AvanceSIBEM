@@ -193,11 +193,30 @@
 }
 .btn-pagar:hover { background: #157347; }
 
+.btn-condonar {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #a32d2d;
+    color: #fcebeb;
+    font-size: .82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+    font-family: inherit;
+}
+.btn-condonar:hover { background: #a32d2d !important; }
+
+
 .sin-accion {
     color: #ccc;
     font-size: .85rem;
     padding-left: 4px;
 }
+
+
 
 /* ── Tarjetas métricas ── */
 /* ── Métricas ── */
@@ -207,6 +226,8 @@
     gap: 14px;
     margin-bottom: 24px;
 }
+
+
 
 .metrica-card {
     background: #fff;

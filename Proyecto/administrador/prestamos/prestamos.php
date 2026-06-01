@@ -1,18 +1,20 @@
 <?php
 session_start();
-require_once '../../bd/conexion.php';
+header("Cache-Control: no-store, no-cache, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
 if (!isset($_SESSION['idUsuario'])) {
     header("Location: ../../index.php?error=2");
     exit();
 }
 
+require_once '../../bd/conexion.php';
+
 $puedeAgregar  = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'agregar');
 $puedeDevolver = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'devolver');
+$esPersonal    = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
-$totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo'")->fetch_assoc()['c'];
-$totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido'")->fetch_assoc()['c'];
-$totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
 
 // Actualizar préstamos vencidos automáticamente
 $conn->query("
@@ -22,7 +24,19 @@ $conn->query("
     AND fechaDevolucion < NOW()
 ");
 
-$prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto'");
+if ($esPersonal) {
+    $idU = $_SESSION['idUsuario'];
+    $totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND idUsuario = '$idU'")->fetch_assoc()['c'];
+    $totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido' AND idUsuario = '$idU'")->fetch_assoc()['c'];
+    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND idUsuario = '$idU' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
+    $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto' AND idUsuario = '$idU'");
+} else {
+    $totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo'")->fetch_assoc()['c'];
+    $totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido'")->fetch_assoc()['c'];
+    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
+    $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto'");
+}
+
 $listaPrestamos = [];
 if ($prestamos) {
     while ($row = $prestamos->fetch_assoc()) {
@@ -30,6 +44,7 @@ if ($prestamos) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -42,6 +57,39 @@ if ($prestamos) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
+
+<?php if (isset($_GET['exito'])): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: 'Préstamo registrado correctamente',
+            confirmButtonColor: '#198754'
+        });
+    });
+</script>
+<?php elseif (isset($_GET['error'])): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const errores = {
+            'campos_vacios':  'Faltan campos obligatorios',
+            'no_disponible':  'El ejemplar ya no está disponible',
+            'insert_fallido': 'Error al guardar el préstamo',
+            'max_prestamos':  'El usuario ya alcanzó el límite máximo de préstamos permitidos',
+            'tiene_adeudo':   'El usuario tiene multas pendientes y no puede realizar préstamos'
+        };
+    Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errores['<?= $_GET["error"] ?>'] || 'Error desconocido',
+        confirmButtonColor: '#dc3545'
+    }).then(() => {
+        window.history.replaceState({}, document.title, 'prestamos.php');
+    });
+    });
+</script>
+<?php endif; ?>
 
 <div class="wrapper">
     <aside class="sidebar">
@@ -60,22 +108,27 @@ if ($prestamos) {
                 <svg fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm9 1.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4a.5.5 0 0 0-.5.5M9 8a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4A.5.5 0 0 0 9 8m1 2.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5m-1 2C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1 1 0 0 0 2 13h6.96q.04-.245.04-.5M7 6a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/></svg>
                 Préstamos
             </button>
+            <?php if (!$esPersonal): ?>
             <button class="nav-btn" onclick="location.href='../usuarios/usuarios.php'">
                 <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
                 Usuarios
             </button>
+            <?php endif; ?>
+
             <button class="nav-btn" onclick="location.href='../adeudos/adeudos.php'">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
                 Adeudos
             </button>
-            <button class="nav-btn">
+            <button class="nav-btn" onclick="location.href='../estadisticas/estadisticas.php'">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                 Estadísticas
             </button>
+            <?php if (!$esPersonal): ?>
             <button class="nav-btn" onclick="location.href='../roles/roles.php'">
                 <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
                 Roles
             </button>
+            <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
             <div class="user-row">
@@ -84,7 +137,7 @@ if ($prestamos) {
                     <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
                     <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
                 </div>
-                <button class="logout-btn" onclick="location.href='../../index.php'" title="Cerrar sesión">
+                <button class="logout-btn" onclick="confirmarLogout()" title="Cerrar sesión">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
             </div>
@@ -99,7 +152,6 @@ if ($prestamos) {
 
         <div class="content-area">
 
-            <!-- Métricas -->
              <!-- Métricas -->
 <div class="metricas">
     <div class="metrica-card">
@@ -222,7 +274,8 @@ if ($prestamos) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form method="POST" action="procesar_prestamo.php">
+                <form method="POST" action="procesar_prestamo.php" >
+               
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="float-none w-auto px-2 fs-6 text-muted">Datos del Usuario</legend>
                         <div class="row g-3 mb-3">
@@ -252,7 +305,7 @@ if ($prestamos) {
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Código del Ejemplar <span class="text-danger">*</span></label>
-                                <input type="text" id="inputCodigo" name="codigoEjemplar" class="form-control" placeholder="Código del ejemplar" onblur="buscarEjemplar()" required>
+                                <input type="text" id="inputCodigo" name="codigoEjemplar"class="form-control" placeholder="Código del ejemplar" onblur="buscarEjemplar()"onkeydown="if(event.key==='Enter'){event.preventDefault(); buscarEjemplar(); document.querySelector('[name=\'fechaDevolucion\']').focus();}"required>
                                 <small id="msgEjemplar" class="text-danger d-none">Ejemplar no encontrado</small>
                             </div>
                             <div class="col-md-6">
@@ -274,7 +327,7 @@ if ($prestamos) {
                     </fieldset>
                     <div class="d-flex justify-content-end gap-2">
                         <button type="submit" class="btn btn-success px-4">Agregar Préstamo</button>
-                        <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal" onclick="limpiarModal()">Cancelar</button>
                     </div>
                 </form>
             </div>
@@ -325,25 +378,60 @@ function buscarUsuario() {
         .then(res => res.json())
         .then(data => {
             if (data.encontrado) {
+                // Verificar multas pendientes
+                if (data.tieneMulta) {
+                    msg.textContent = 'Usuario con multas pendientes, NO puede realizar préstamos';
+                    msg.classList.remove('d-none');
+                    document.getElementById('inputNombre').value      = '';
+                    document.getElementById('inputCorreo').value      = '';
+                    document.getElementById('inputTipoUsuario').value = '';
+                    document.querySelector('[name="fechaDevolucion"]').value = '';
+                    return;
+                }
+                // Verificar máximo de préstamos
+                if (data.excedeMax) {
+                    msg.textContent = 'Usuario con maximo de prestamos activos, NO puede realizar más';
+                    msg.classList.remove('d-none');
+                    document.getElementById('inputNombre').value      = '';
+                    document.getElementById('inputCorreo').value      = '';
+                    document.getElementById('inputTipoUsuario').value = '';
+                    document.querySelector('[name="fechaDevolucion"]').value = '';
+                    return;
+                }
                 document.getElementById('inputNombre').value      = data.nombre;
                 document.getElementById('inputCorreo').value      = data.correo;
                 document.getElementById('inputTipoUsuario').value = data.tipoPersona;
                 msg.classList.add('d-none');
-            if (data.diasPrestamo > 0) {
-                const hoy = new Date();
-                hoy.setDate(hoy.getDate() + parseInt(data.diasPrestamo));
-                document.querySelector('[name="fechaDevolucion"]').value = hoy.toISOString().split('T')[0];
-            }
+                if (data.diasPrestamo > 0) {
+                    const hoy = new Date();
+                    hoy.setDate(hoy.getDate() + parseInt(data.diasPrestamo));
+                    document.querySelector('[name="fechaDevolucion"]').value = hoy.toISOString().split('T')[0];
+                }
             } else {
                 document.getElementById('inputNombre').value      = '';
                 document.getElementById('inputCorreo').value      = '';
                 document.getElementById('inputTipoUsuario').value = '';
                 document.querySelector('[name="fechaDevolucion"]').value = '';
+                msg.textContent = 'Usuario no encontrado';
                 msg.classList.remove('d-none');
             }
         });
 }
+// Para limpiar el modal al presionar cancelar 
+function limpiarModal() {
+    document.getElementById('inputIdUsuario').value  = '';
+    document.getElementById('inputNombre').value     = '';
+    document.getElementById('inputCorreo').value     = '';
+    document.getElementById('inputTipoUsuario').value = '';
+    document.getElementById('inputCodigo').value     = '';
+    document.getElementById('inputTitulo').value     = '';
+    document.getElementById('inputIdEjemplar').value = '';
+    document.querySelector('[name="fechaDevolucion"]').value = '';
+    document.getElementById('msgUsuario').classList.add('d-none');
+    document.getElementById('msgEjemplar').classList.add('d-none');
+}
 
+                                
 function buscarEjemplar() {
     const codigo = document.getElementById('inputCodigo').value.trim();
     const msg    = document.getElementById('msgEjemplar');
@@ -419,13 +507,28 @@ function confirmarDevolucion() {
         });
 }
 
+function confirmarLogout() {
+    Swal.fire({
+        title: '¿Cerrar sesión?',
+        text: '¿Estás seguro que deseas salir del sistema?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3B6D11',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, cerrar sesión',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            location.href = '../../php/php_login/logout.php';
+        }
+    });
+}
+
 document.getElementById('mbgDevolver').addEventListener('click', function(e) {
     if (e.target === this) cerrarModalDevolver();
 });
+
 </script>
-
-
-
 </script>
 </body>
 </html>

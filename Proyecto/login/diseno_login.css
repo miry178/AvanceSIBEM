@@ -12,7 +12,7 @@ body {
 .panel-decorativo {
     background-color: #c8e6c9;
     border-radius: 8px;
-    min-height: 320px;
+    min-height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;

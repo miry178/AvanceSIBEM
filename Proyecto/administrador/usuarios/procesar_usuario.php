@@ -1,17 +1,6 @@
 <?php
 header('Content-Type: application/json');
-
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) {
-    echo json_encode(['ok' => false, 'error' => 'Error de conexión']);
-    exit;
-}
-
-$pdo = new PDO("mysql:host=localhost;dbname=biblioteca;charset=utf8mb4", "root", "5775", [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    PDO::ATTR_EMULATE_PREPARES   => false,
-]);
+require_once '../../bd/conexion.php';
 
 // ── DESACTIVAR usuario ─────────────────────────────────────────
 if (!empty($_POST['eliminar'])) {
@@ -22,6 +11,24 @@ if (!empty($_POST['eliminar'])) {
         $pdo->prepare("UPDATE Usuario SET activo = 'no' WHERE idUsuario = ?")
             ->execute([$id]);
         echo json_encode(['ok' => true, 'mensaje' => 'Usuario marcado como inactivo correctamente']);
+    } catch (Exception $e) {
+        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// ── TOGGLE activar/desactivar ──────────────────────────────────
+if (!empty($_POST['toggle'])) {
+    $id     = trim($_POST['idUsuario'] ?? '');
+    $activo = ($_POST['activo'] ?? '') === 'si' ? 'si' : 'no';
+    
+    if (!$id) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
+
+    try {
+        $pdo->prepare("UPDATE Usuario SET activo = ? WHERE idUsuario = ?")
+            ->execute([$activo, $id]);
+        $mensaje = $activo === 'si' ? 'Usuario activado correctamente' : 'Usuario desactivado correctamente';
+        echo json_encode(['ok' => true, 'mensaje' => $mensaje]);
     } catch (Exception $e) {
         echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
@@ -46,6 +53,19 @@ try {
     $pdo->beginTransaction();
 
     if ($editando) {
+        // ── Verificar que no haya más de un Administrador al editar ──
+        // Si se intenta cambiar el rol a Administrador (idRol=1)
+        // y ya existe otro Administrador diferente al que se está editando, se bloquea
+        if ($idTipoPersona == 1) {
+            $checkAdmin = $pdo->prepare("SELECT COUNT(*) AS total FROM Usuario WHERE idRol = 1 AND idUsuario != ?");
+            $checkAdmin->execute([$editando]);
+            $totalAdmins = $checkAdmin->fetch()['total'];
+            if ($totalAdmins >= 1) {
+                echo json_encode(['ok' => false, 'error' => 'Ya existe un Administrador en el sistema. Solo puede haber uno.']);
+                $pdo->rollBack(); exit;
+            }
+        }
+
         // Editar sin tocar la contraseña
         $pdo->prepare("UPDATE Usuario SET nombre=?, correoInst=?, activo=?, idRol=? WHERE idUsuario=?")
             ->execute([$nombre, $correoInst, $activo, $idTipoPersona, $idUsuario]);
@@ -78,12 +98,25 @@ try {
         echo json_encode(['ok' => true, 'mensaje' => 'Usuario actualizado correctamente']);
 
     } else {
-        // Verificar que no exista
+        // Verificar que no exista el mismo ID
         $check = $pdo->prepare("SELECT idUsuario FROM Usuario WHERE idUsuario=?");
         $check->execute([$idUsuario]);
         if ($check->fetch()) {
             echo json_encode(['ok' => false, 'error' => 'Ya existe un usuario con ese No. Control / RFC']);
             $pdo->rollBack(); exit;
+        }
+
+        // ── Verificar que no haya más de un Administrador al crear ──
+        // Si se intenta registrar un nuevo Administrador (idRol=1)
+        // y ya existe uno en el sistema, se bloquea
+        if ($idTipoPersona == 1) {
+            $checkAdmin = $pdo->prepare("SELECT COUNT(*) AS total FROM Usuario WHERE idRol = 1");
+            $checkAdmin->execute();
+            $totalAdmins = $checkAdmin->fetch()['total'];
+            if ($totalAdmins >= 1) {
+                echo json_encode(['ok' => false, 'error' => 'Ya existe un Administrador en el sistema. Solo puede haber uno.']);
+                $pdo->rollBack(); exit;
+            }
         }
 
         // Insertar en Usuario con contraseña NULL e idRol
@@ -94,10 +127,11 @@ try {
         $pdo->prepare("INSERT INTO RelRol (idUsuario, correoInst, idRol) VALUES (?,?,?)")
             ->execute([$idUsuario, $correoInst, $idTipoPersona]);
 
-        // Insertar en Alumno o Docente según rol
+        // Insertar en Alumno si es Alumno (idRol=5)
         if ($idTipoPersona == 5 && $idCarrera) {
             $pdo->prepare("INSERT INTO Alumno (idUsuario, idCarrera) VALUES (?,?)")->execute([$idUsuario, $idCarrera]);
         }
+        // Insertar en Docente si es Docente (idRol=4)
         if ($idTipoPersona == 4 && $idDivision) {
             $pdo->prepare("INSERT INTO Docente (idUsuario, idDivision) VALUES (?,?)")->execute([$idUsuario, $idDivision]);
         }

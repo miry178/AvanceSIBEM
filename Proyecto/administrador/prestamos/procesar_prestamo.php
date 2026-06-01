@@ -26,12 +26,56 @@ if (!$ejemplar || $ejemplar['estado'] !== 'disponible') {
     exit;
 }
 
+// Verificar que el usuario no exceda el máximo de préstamos permitidos
+$checkMax = $conn->prepare("
+    SELECT COUNT(*) AS total FROM Prestamo 
+    WHERE idUsuario = ? AND estado IN ('activo', 'vencido')
+");
+$checkMax->bind_param("s", $idUsuario);
+$checkMax->execute();
+$totalPrestamos = $checkMax->get_result()->fetch_assoc()['total'];
+
+// Obtener el máximo permitido según el rol del usuario
+$checkRegla = $conn->prepare("
+    SELECT rp.maxPrestamo 
+    FROM ReglasPrestamo rp
+    JOIN RelRol rr ON rp.idRol = rr.idRol
+    WHERE rr.idUsuario = ?
+    LIMIT 1
+");
+$checkRegla->bind_param("s", $idUsuario);
+$checkRegla->execute();
+$regla = $checkRegla->get_result()->fetch_assoc();
+$maxPrestamo = $regla['maxPrestamo'] ?? 2;
+
+if ($totalPrestamos >= $maxPrestamo) {
+    header("Location: prestamos.php?error=max_prestamos");
+    exit;
+}
+
 // Obtener correo del usuario
 $uq = $conn->prepare("SELECT correoInst FROM Usuario WHERE idUsuario = ?");
 $uq->bind_param("s", $idUsuario);
 $uq->execute();
 $usuario = $uq->get_result()->fetch_assoc();
 $correoInst = $usuario['correoInst'] ?? '';
+
+// Verificar que el usuario no tenga multas pendientes
+$checkMulta = $conn->prepare("
+    SELECT COUNT(*) AS total
+    FROM Multa mu
+    JOIN Prestamo p ON mu.idPrestamo = p.idPrestamo
+    WHERE p.idUsuario = ? AND mu.pagada = 'no'
+");
+$checkMulta->bind_param("s", $idUsuario);
+$checkMulta->execute();
+$tieneMulta = $checkMulta->get_result()->fetch_assoc()['total'];
+
+if ($tieneMulta > 0) {
+    header("Location: prestamos.php?error=tiene_adeudo");
+    exit;
+}
+
 
 // Insertar el préstamo
 $stmt = $conn->prepare("

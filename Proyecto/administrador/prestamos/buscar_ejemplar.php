@@ -11,8 +11,12 @@ if ($codigo === '') {
 }
 
 // Busca el ejemplar y el título del material al que pertenece
-$stmt = $conn->prepare("SELECT * FROM vista_ejemplares_disponibles 
-    WHERE codigoEjemplar = ?");
+$stmt = $conn->prepare("
+    SELECT e.idEjemplar, e.codigoEjemplar, e.estado, m.titulo, m.autor
+    FROM Ejemplar e
+    JOIN Material m ON e.idMaterial = m.idMaterial
+    WHERE e.codigoEjemplar = ?
+");
     
 $stmt->bind_param("s", $codigo);
 $stmt->execute();

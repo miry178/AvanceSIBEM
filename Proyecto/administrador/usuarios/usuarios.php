@@ -1,9 +1,21 @@
 <?php
 session_start();
-require_once '../../bd/conexion.php';
+header("Cache-Control: no-store, no-cache, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 
 if (!isset($_SESSION['idUsuario'])) {
     header("Location: ../../index.php?error=2");
+    exit();
+}
+
+require_once '../../bd/conexion.php';
+
+$esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
+
+// Si es alumno o docente no tiene acceso a usuarios
+if ($esPersonal) {
+    header("Location: ../home/inicio.php");
     exit();
 }
 
@@ -11,10 +23,10 @@ $puedeAgregar    = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'agreg
 $puedeEditar     = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'editar');
 $puedeDesactivar = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'desactivar');
 
-// Cargar carreras y divisiones para los selects
-$carreras  = $conn->query("SELECT idCarrera, descripcion FROM Carrera ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
+$carreras   = $conn->query("SELECT idCarrera, descripcion FROM Carrera ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
 $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -48,32 +60,37 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
             </div>
             <span>SIBEM</span>
         </div>
-        <nav class="sidebar-nav">
-            <button class="nav-btn" onclick="location.href='../home/inicio.php'">
-                <svg fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/></svg>
-                Inicio
-            </button>
-            <button class="nav-btn" onclick="location.href='../prestamos/prestamos.php'">
-                <svg fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm9 1.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4a.5.5 0 0 0-.5.5M9 8a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4A.5.5 0 0 0 9 8m1 2.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5m-1 2C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1 1 0 0 0 2 13h6.96q.04-.245.04-.5M7 6a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/></svg>
-                Préstamos
-            </button>
-            <button class="nav-btn active" onclick="location.href='usuarios.php'">
-                <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
-                Usuarios
-            </button>
-            <button class="nav-btn"onclick="location.href='../adeudos/adeudos.php'">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-                Adeudos
-            </button>
-            <button class="nav-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                Estadísticas
-            </button>
-            <button class="nav-btn" onclick="location.href='../roles/roles.php'">
-                <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
-                Roles
-            </button>
-        </nav>
+            <nav class="sidebar-nav">
+        <button class="nav-btn" onclick="location.href='../home/inicio.php'">
+            <svg fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5"/></svg>
+            Inicio
+        </button>
+        <button class="nav-btn" onclick="location.href='../prestamos/prestamos.php'">
+            <svg fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm9 1.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4a.5.5 0 0 0-.5.5M9 8a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 0-1h-4A.5.5 0 0 0 9 8m1 2.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1h-3a.5.5 0 0 0-.5.5m-1 2C9 10.567 7.21 9 5 9c-2.086 0-3.8 1.398-3.984 3.181A1 1 0 0 0 2 13h6.96q.04-.245.04-.5M7 6a2 2 0 1 0-4 0 2 2 0 0 0 4 0"/></svg>
+            Préstamos
+        </button>
+        <?php if (!$esPersonal): ?>
+        <button class="nav-btn active" onclick="location.href='../usuarios/usuarios.php'">
+            <svg fill="currentColor" viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg>
+            Usuarios
+        </button>
+        <?php endif; ?>
+        <button class="nav-btn" onclick="location.href='../adeudos/adeudos.php'">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            Adeudos
+        </button>
+        <button class="nav-btn" onclick="location.href='../estadisticas/estadisticas.php'">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+            Estadísticas
+        </button>
+        <?php if (!$esPersonal): ?>
+        <button class="nav-btn" onclick="location.href='../roles/roles.php'">
+            <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
+            Roles
+        </button>
+        <?php endif; ?>
+    </nav>
+
         <div class="sidebar-footer">
             <div class="user-row">
             <div class="avatar"><?= strtoupper(substr($_SESSION['nombre'] ?? 'A', 0, 1)) ?></div>
@@ -81,7 +98,7 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
                 <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
                 <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
             </div>
-                <button class="logout-btn" title="Cerrar sesión">
+                <button class="logout-btn" title="Cerrar sesión" onclick="confirmarLogout()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
                 </button>
             </div>
@@ -299,7 +316,7 @@ function renderTabla(data) {
         return;
     }
     b.innerHTML = data.map(u => `
-        <tr class="clickable" onclick="verDetalle('${u.idUsuario}')">
+        <tr>
             <td style="font-weight:500;">${u.nombre}</td>
             <td style="color:#888;font-size:11px;">${u.idUsuario}</td>
             <td style="font-size:11px;">${u.correoInst}</td>
@@ -315,12 +332,14 @@ function renderTabla(data) {
                     </svg>
                 </button>` : ''}
                 ${puedeDesactivar ? `
-                <button class="ic-btn" style="background:#fcebeb;" title="Desactivar"
-                    onclick="event.stopPropagation(); confirmarEliminar('${u.idUsuario}', '${u.nombre}')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e24b4a" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6l-1 14H6L5 6"/>
-                        <path d="M10 11v6M14 11v6"/>
+                <button class="ic-btn" style="background:${u.activo === 'si' ? '#fcebeb' : '#eaf3de'};" 
+                    title="${u.activo === 'si' ? 'Desactivar' : 'Activar'}"
+                    onclick="event.stopPropagation(); confirmarToggle('${u.idUsuario}', '${u.nombre}', '${u.activo}')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" 
+                        stroke="${u.activo === 'si' ? '#e24b4a' : '#27500a'}" stroke-width="2">
+                        ${u.activo === 'si' 
+                            ? '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'
+                            : '<path d="M20 6L9 17l-5-5"/>'}
                     </svg>
                 </button>` : ''}
             </td>
@@ -455,27 +474,35 @@ function guardarUsuario() {
         .catch(() => Swal.fire({ icon:'error', title:'Error', text:'Error de conexión', confirmButtonColor:'#dc3545' }));
 }
 
-function confirmarEliminar(id, nombre) {
+function confirmarToggle(id, nombre, estadoActual) {
+    const activando = estadoActual === 'no';
     Swal.fire({
         icon: 'warning',
-        title: '¿Desactivar usuario?',
-        text: nombre + ' quedará como inactivo pero se conservará su historial.',
+        title: activando ? '¿Activar usuario?' : '¿Desactivar usuario?',
+        text: activando 
+            ? nombre + ' volverá a estar activo en el sistema.'
+            : nombre + ' quedará como inactivo pero se conservará su historial.',
         showCancelButton: true,
-        confirmButtonColor: '#b8b800',
+        confirmButtonColor: activando ? '#198754' : '#b8b800',
         cancelButtonColor: '#aaa',
-        confirmButtonText: 'Sí, desactivar',
+        confirmButtonText: activando ? 'Sí, activar' : 'Sí, desactivar',
         cancelButtonText: 'Cancelar'
     }).then(result => {
         if (result.isConfirmed) {
             const fd = new FormData();
             fd.append('idUsuario', id);
-            fd.append('eliminar', '1');
+            fd.append('activo', activando ? 'si' : 'no');
+            fd.append('toggle', '1');
             fetch('procesar_usuario.php', { method:'POST', body: fd })
                 .then(r => r.json())
                 .then(data => {
                     if (data.ok) {
-                        Swal.fire({ icon:'success', title:'Desactivado', text: data.mensaje, confirmButtonColor:'#198754' })
-                        .then(() => cargarUsuarios());
+                        Swal.fire({ 
+                            icon:'success', 
+                            title: activando ? 'Activado' : 'Desactivado', 
+                            text: data.mensaje, 
+                            confirmButtonColor:'#198754' 
+                        }).then(() => cargarUsuarios());
                     } else {
                         Swal.fire({ icon:'error', title:'Error', text: data.error, confirmButtonColor:'#dc3545' });
                     }
@@ -485,7 +512,10 @@ function confirmarEliminar(id, nombre) {
 }
 
 function eliminarUsuario() {
-    if (usuarioEditando) confirmarEliminar(usuarioEditando, document.getElementById('fNombre').value);
+    if (usuarioEditando) {
+        const u = todosUsuarios.find(x => x.idUsuario === usuarioEditando);
+        confirmarToggle(usuarioEditando, document.getElementById('fNombre').value, u ? u.activo : 'si');
+    }
 }
 
 function cerrar(id) { document.getElementById(id).classList.remove('open'); }
@@ -499,6 +529,23 @@ document.querySelectorAll('.mbg').forEach(m => m.addEventListener('click', funct
 }));
 
 document.addEventListener('DOMContentLoaded', cargarUsuarios);
+
+function confirmarLogout() {
+    Swal.fire({
+        title: '¿Cerrar sesión?',
+        text: '¿Estás seguro que deseas salir del sistema?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3B6D11',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, cerrar sesión',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            location.href = '../../php/php_login/logout.php';
+        }
+    });
+}
 </script>
 </body>
 </html>

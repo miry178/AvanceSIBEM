@@ -37,7 +37,7 @@ if($usuario['activo'] === 'no'){
 // Lo mandamos al paso 1 del registro para que cree su contrasea
 
 if(empty($usuario['password'])){
-    header("Location: ../../vistas/registro_paso1.php?error=3");
+    header("Location: ../../vistas/registro_paso1.php?sinregistro=1");
     exit();
 }
 // ---- 4. Verificar la contraseña ----
@@ -58,7 +58,7 @@ $_SESSION['correo']    = $correo;
 // Consultamos qué tipo de usuario es (Administrador, Alumno, Docente, etc.)
 // para saber a qué página redirigirlo
 $stmtTipo = $conn->prepare("
-    SELECT r.descripcion 
+    SELECT r.descripcion, r.idRol
     FROM RelRol rr
     JOIN Rol r ON rr.idRol = r.idRol
     WHERE rr.idUsuario = ?
@@ -70,8 +70,31 @@ $resTipo = $stmtTipo->get_result();
 $tipo    = $resTipo->fetch_assoc();
 // Guardamos el tipo en la sesión, si no tiene tipo asignado se pone Invitado por defecto
 $_SESSION['tipoUsuario'] = $tipo['descripcion'] ?? 'Invitado';
+$_SESSION['idRol'] = $tipo['idRol'] ?? null;
 
-// ---- 7. Redirigir según tipo de usuario ----
+// ---- 7. Verificar si es Alumno o Docente ----
+// Consultamos si el usuario está en la tabla Alumno o Docente
+// para saber si debe ver información limitada
+$stmtAlumno = $conn->prepare("SELECT idUsuario FROM Alumno WHERE idUsuario = ?");
+$stmtAlumno->bind_param("s", $usuario['idUsuario']);
+$stmtAlumno->execute();
+$esAlumno = $stmtAlumno->get_result()->num_rows > 0;
+
+$stmtDocente = $conn->prepare("SELECT idUsuario FROM Docente WHERE idUsuario = ?");
+$stmtDocente->bind_param("s", $usuario['idUsuario']);
+$stmtDocente->execute();
+$esDocente = $stmtDocente->get_result()->num_rows > 0;
+
+// Guardamos en sesión el tipo real de persona
+if ($esAlumno) {
+    $_SESSION['tipoPersona'] = 'Alumno';
+} elseif ($esDocente) {
+    $_SESSION['tipoPersona'] = 'Docente';
+} else {
+    $_SESSION['tipoPersona'] = $_SESSION['tipoUsuario']; // Administrador, Encargado, Invitado
+}
+
+// ---- 8. Redirigir según tipo de usuario ----
 // Según el rol del usuario lo mandamos a la interfaz correspondiente
 switch($_SESSION['tipoUsuario']){
     case 'Administrador':
