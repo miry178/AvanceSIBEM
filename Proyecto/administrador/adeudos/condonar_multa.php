@@ -14,11 +14,13 @@ if (!$idMulta) {
     exit();
 }
 
-try {
-    $pdo->prepare("DELETE FROM Multa WHERE idMulta = ?")
-        ->execute([$idMulta]);
+$stmt = $conn->prepare("DELETE FROM Multa WHERE idMulta = ?");
+$stmt->bind_param("i", $idMulta);
+
+if ($stmt->execute()) {
     header("Location: adeudos.php?condonada=1");
-} catch (Exception $e) {
+} else {
     header("Location: adeudos.php?error=1");
 }
 exit();
+?>

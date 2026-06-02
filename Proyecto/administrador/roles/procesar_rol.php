@@ -19,16 +19,29 @@ if (!empty($_POST['eliminar'])) {
     $idRol = intval($_POST['idRol'] ?? 0);
     if (!$idRol) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
     if ($idRol === 1) { echo json_encode(['ok' => false, 'error' => 'El rol Administrador no puede eliminarse']); exit; }
+
+    $conn->begin_transaction();
     try {
-        $pdo->beginTransaction();
-        $pdo->prepare("DELETE FROM RolPermiso WHERE idRol = ?")->execute([$idRol]);
-        $pdo->prepare("UPDATE Usuario SET idRol = NULL WHERE idRol = ?")->execute([$idRol]);
-        $pdo->prepare("DELETE FROM RelRol WHERE idRol = ?")->execute([$idRol]);
-        $pdo->prepare("DELETE FROM Rol WHERE idRol = ?")->execute([$idRol]);
-        $pdo->commit();
+        $s1 = $conn->prepare("DELETE FROM RolPermiso WHERE idRol = ?");
+        $s1->bind_param("i", $idRol);
+        $s1->execute();
+
+        $s2 = $conn->prepare("UPDATE Usuario SET idRol = NULL WHERE idRol = ?");
+        $s2->bind_param("i", $idRol);
+        $s2->execute();
+
+        $s3 = $conn->prepare("DELETE FROM RelRol WHERE idRol = ?");
+        $s3->bind_param("i", $idRol);
+        $s3->execute();
+
+        $s4 = $conn->prepare("DELETE FROM Rol WHERE idRol = ?");
+        $s4->bind_param("i", $idRol);
+        $s4->execute();
+
+        $conn->commit();
         echo json_encode(['ok' => true, 'mensaje' => 'Rol eliminado correctamente']);
     } catch (Exception $e) {
-        $pdo->rollBack();
+        $conn->rollback();
         echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
     }
     exit;
@@ -40,16 +53,17 @@ if (!empty($_POST['guardarRol'])) {
     $desc   = trim($_POST['descripcion'] ?? '');
     $idRol  = intval($_POST['idRol']     ?? 0);
     if (!$nombre) { echo json_encode(['ok' => false, 'error' => 'El nombre es obligatorio']); exit; }
-    try {
-        if ($idRol) {
-            $pdo->prepare("UPDATE Rol SET descripcion = ? WHERE idRol = ?")->execute([$nombre, $idRol]);
-            echo json_encode(['ok' => true, 'mensaje' => 'Rol actualizado correctamente']);
-        } else {
-            $pdo->prepare("INSERT INTO Rol (descripcion) VALUES (?)")->execute([$nombre]);
-            echo json_encode(['ok' => true, 'mensaje' => 'Rol creado correctamente']);
-        }
-    } catch (Exception $e) {
-        echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+
+    if ($idRol) {
+        $stmt = $conn->prepare("UPDATE Rol SET descripcion = ? WHERE idRol = ?");
+        $stmt->bind_param("si", $nombre, $idRol);
+        $stmt->execute();
+        echo json_encode(['ok' => true, 'mensaje' => 'Rol actualizado correctamente']);
+    } else {
+        $stmt = $conn->prepare("INSERT INTO Rol (descripcion) VALUES (?)");
+        $stmt->bind_param("s", $nombre);
+        $stmt->execute();
+        echo json_encode(['ok' => true, 'mensaje' => 'Rol creado correctamente']);
     }
     exit;
 }
@@ -61,18 +75,27 @@ $permisos     = json_decode($permisosJson, true) ?? [];
 
 if (!$idRol) { echo json_encode(['ok' => false, 'error' => 'ID de rol inválido']); exit; }
 
+$conn->begin_transaction();
 try {
-    $pdo->beginTransaction();
-    $pdo->prepare("DELETE FROM RolPermiso WHERE idRol = ?")->execute([$idRol]);
+    // Borrar permisos actuales del rol
+    $s1 = $conn->prepare("DELETE FROM RolPermiso WHERE idRol = ?");
+    $s1->bind_param("i", $idRol);
+    $s1->execute();
+
+    // Insertar nuevos permisos
     if (!empty($permisos)) {
-        $stmt = $pdo->prepare("INSERT INTO RolPermiso (idRol, idPermiso) VALUES (?, ?)");
+        $stmt = $conn->prepare("INSERT INTO RolPermiso (idRol, idPermiso) VALUES (?, ?)");
         foreach ($permisos as $idPermiso) {
-            $stmt->execute([$idRol, intval($idPermiso)]);
+            $idPermiso = intval($idPermiso);
+            $stmt->bind_param("ii", $idRol, $idPermiso);
+            $stmt->execute();
         }
     }
-    $pdo->commit();
+
+    $conn->commit();
     echo json_encode(['ok' => true, 'mensaje' => 'Permisos guardados correctamente']);
 } catch (Exception $e) {
-    $pdo->rollBack();
+    $conn->rollback();
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
 }
+?>

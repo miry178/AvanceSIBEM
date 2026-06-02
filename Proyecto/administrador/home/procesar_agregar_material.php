@@ -39,7 +39,7 @@ $stmt = $conn->prepare("
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 $stmt->bind_param(
-    "ssssisiiss",
+    "ssssississ",
     $titulo, $autor, $isbn, $anioPublicacion,
     $idEditorial, $edicion, $idTipoMaterial,
     $idArea, $idCarrera, $esPrestable

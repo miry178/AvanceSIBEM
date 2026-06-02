@@ -154,6 +154,27 @@
     border: 1px solid #ddd;
 }
 
+.badge-tipo-encargado {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #eeedfe;
+    color: #3c3489;
+    border: 1px solid #c8b8f5;
+}
+.badge-tipo-invitado {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    background: #f1efe8;
+    color: #444441;
+    border: 1px solid #ddd;
+}
+
 /* ── Badge estado (igual que usuarios: Activo/Inactivo) ── */
 .badge-pagado {
     display: inline-block;

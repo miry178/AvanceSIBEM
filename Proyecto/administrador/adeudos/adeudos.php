@@ -13,9 +13,9 @@ require_once '../../bd/conexion.php';
 
 $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
-$puedeVer      = tienePermiso($pdo, $_SESSION['idUsuario'], 'adeudos', 'ver');
-$puedePagar    = tienePermiso($pdo, $_SESSION['idUsuario'], 'adeudos', 'pago');
-$puedeCondonar = tienePermiso($pdo, $_SESSION['idUsuario'], 'adeudos', 'condonar');
+$puedeVer      = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'ver');
+$puedePagar    = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'pago');
+$puedeCondonar = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'condonar');
 // ── Contadores ──
 $totalUsuarios = $conn->query("
     SELECT COUNT(DISTINCT p.idUsuario) AS total
@@ -38,9 +38,9 @@ $totalMultas = $conn->query("
 // ── Datos usando la vista ──
 if ($esPersonal) {
     $idU = $_SESSION['idUsuario'];
-    $adeudos = $conn->query("SELECT * FROM vista_adeudos WHERE idUsuario = '$idU' ORDER BY pagada DESC");
+    $adeudos = $conn->query("SELECT * FROM vista_adeudos WHERE idUsuario = '$idU' ORDER BY pagada ASC, monto DESC");
 } else {
-    $adeudos = $conn->query("SELECT * FROM vista_adeudos WHERE pagada = 'no' ORDER BY monto DESC");
+    $adeudos = $conn->query("SELECT * FROM vista_adeudos ORDER BY pagada ASC, monto DESC");
 }
 ?>
 <!DOCTYPE html>
@@ -180,8 +180,6 @@ if ($esPersonal) {
                         <option value="">Todos los tipos</option>
                         <option value="alumno">Alumno</option>
                         <option value="docente">Docente</option>
-                        <option value="administrativo">Administrativo</option>
-                        <option value="servicio social">Servicio Social</option>
                     </select>
                     <select class="fsel" id="filtroEstado" onchange="filtrarTabla()">
                         <option value="">Todos los estados</option>
@@ -227,9 +225,14 @@ if ($esPersonal) {
                                         $tipoBadge = '<span class="badge-tipo-docente">' . htmlspecialchars($row['tipo']) . '</span>';
                                     } elseif ($tipoLower === 'administrativo') {
                                         $tipoBadge = '<span class="badge-tipo-administrativo">' . htmlspecialchars($row['tipo']) . '</span>';
+                                    } elseif ($tipoLower === 'encargado') {
+                                        $tipoBadge = '<span class="badge-tipo-encargado">' . htmlspecialchars($row['tipo']) . '</span>';
+                                    } elseif ($tipoLower === 'invitado') {
+                                        $tipoBadge = '<span class="badge-tipo-invitado">' . htmlspecialchars($row['tipo']) . '</span>';
                                     } else {
                                         $tipoBadge = '<span class="badge-tipo-otro">' . htmlspecialchars($row['tipo']) . '</span>';
                                     }
+                                    
 
                                     $correo = strlen($row['correo']) > 24
                                         ? substr($row['correo'], 0, 24) . '...'
@@ -287,11 +290,12 @@ function filtrarTabla() {
     const txt  = document.getElementById('buscador').value.toLowerCase();
     const tipo = document.getElementById('filtroTipo').value.toLowerCase();
     const est  = document.getElementById('filtroEstado').value.toLowerCase();
+    let visibles = 0;
 
     document.querySelectorAll('#tablaBody tr').forEach(function(tr) {
         if (tr.querySelector('.td-empty')) return;
         const texto     = tr.textContent.toLowerCase();
-        const tipoBadge = tr.querySelector('[class^="badge-tipo"]');
+        const tipoBadge = tr.querySelector('[class*="badge-tipo"]');
         const tipoBadgeTxt = tipoBadge ? tipoBadge.textContent.trim().toLowerCase() : '';
         const estBadge  = tr.querySelector('.badge-pagado, .badge-pendiente');
         const estTxt    = estBadge ? estBadge.textContent.trim().toLowerCase() : '';
@@ -299,8 +303,25 @@ function filtrarTabla() {
         const okT  = texto.includes(txt);
         const okTp = !tipo || tipoBadgeTxt === tipo;
         const okE  = !est  || estTxt === est;
-        tr.style.display = (okT && okTp && okE) ? '' : 'none';
+        const mostrar = okT && okTp && okE;
+        tr.style.display = mostrar ? '' : 'none';
+        if (mostrar) visibles++;
     });
+
+    // Mostrar mensaje si no hay resultados
+    const tbody = document.getElementById('tablaBody');
+    const sinResultados = document.getElementById('sinResultadosAdeudos');
+    if (visibles === 0) {
+        if (!sinResultados) {
+            const tr = document.createElement('tr');
+            tr.id = 'sinResultadosAdeudos';
+            tr.innerHTML = '<td colspan="10" style="text-align:center;color:#aaa;padding:20px;">No se encontraron adeudos</td>';
+            tbody.appendChild(tr);
+        }
+    } else {
+        if (sinResultados) sinResultados.remove();
+    }
+
     actualizarContador();
 }
 

@@ -50,6 +50,18 @@ if ($esAdmin) {
         LIMIT 5
     ")->fetch_all(MYSQLI_ASSOC);
 
+        // Top carreras con más préstamos
+    $topCarreras = $conn->query("
+        SELECT c.descripcion AS carrera, COUNT(*) AS total
+        FROM Prestamo p
+        JOIN Usuario u ON p.idUsuario = u.idUsuario
+        JOIN Alumno a ON u.idUsuario = a.idUsuario
+        JOIN Carrera c ON a.idCarrera = c.idCarrera
+        GROUP BY c.idCarrera
+        ORDER BY total DESC
+        LIMIT 5
+    ")->fetch_all(MYSQLI_ASSOC);
+
     // Multas recaudadas vs pendientes
     $multas = $conn->query("
         SELECT 
@@ -231,6 +243,10 @@ if ($esAdmin) {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                         Top usuarios
                     </button>
+                    <button class="tab-btn" onclick="mostrarTab('tabCarreras', this)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+                        Top carreras
+                    </button>
                     <button class="tab-btn" onclick="mostrarTab('tabMultas', this)">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
                         Multas
@@ -248,6 +264,10 @@ if ($esAdmin) {
                 <div class="tab-content" id="tabUsuarios" style="display:none;">
                     <div class="chart-title">Top 5 usuarios con más préstamos</div>
                     <canvas id="chartUsuarios"></canvas>
+                </div>
+                <div class="tab-content" id="tabCarreras" style="display:none;">
+                    <div class="chart-title">Top carreras con más préstamos</div>
+                    <canvas id="chartCarreras"></canvas>
                 </div>
                 <div class="tab-content" id="tabMultas" style="display:none;">
                     <div class="chart-title">Multas Registradas</div>
@@ -425,7 +445,6 @@ new Chart(document.getElementById('chartLibros'), {
         }]
     },
     options: {
-        indexAxis: 'y',
         responsive: true,
         plugins: { legend: { display: false } },
         scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
@@ -448,6 +467,26 @@ new Chart(document.getElementById('chartUsuarios'), {
     options: {
         responsive: true,
         plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }
+    }
+});
+
+const nombresCarreras = <?= json_encode(array_column($topCarreras, 'carrera')) ?>;
+const totalesCarreras = <?= json_encode(array_column($topCarreras, 'total')) ?>;
+new Chart(document.getElementById('chartCarreras'), {
+    type: 'bar',
+    data: {
+        labels: nombresCarreras,
+        datasets: [{
+            label: 'Préstamos',
+            data: totalesCarreras,
+            backgroundColor: ['#3B6D11','#C0DD97','#faeeda','#f5e840','#e6f1fb'],
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
     }
 });
 

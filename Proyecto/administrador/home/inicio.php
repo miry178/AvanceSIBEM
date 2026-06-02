@@ -8,10 +8,8 @@ if (!isset($_SESSION['idUsuario'])) {
     exit();
 }
 
-
-
 // Verificar permisos
-$puedeAgregar = tienePermiso($pdo, $_SESSION['idUsuario'], 'catalogo', 'agregar');
+$puedeAgregar = tienePermiso($conn, $_SESSION['idUsuario'], 'catalogo', 'agregar');
 $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
 ?>
@@ -101,11 +99,12 @@ $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
             </button>
             <?php endif; ?>
         </nav>
-
+        <!-- Obtenemos los datos del usuario para mostrar el nombre y rol del que se loguea -->
         <div class="sidebar-footer">
             <div class="user-row">
                 <div class="avatar"><?= strtoupper(substr($_SESSION['nombre'] ?? 'A', 0, 1)) ?></div>
                     <div>
+                        <!--Esas funciones de js convierte caracteres extraños en seguros-->
                         <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
                         <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
                     </div>
@@ -166,8 +165,11 @@ $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
                     <!-- Categorías cargadas dinámicamente desde la BD -->
                     <select class="filter-select" id="filtroClasificacion" onchange="buscarMaterial()">
                         <option value="">Todas las clasificaciones</option>
+                        <!-- utilizamos query en la consulta para consultas fijas sin variables del usuario -->
                         <?php
+                                                                                                             //excluye los registros donde clasificación está vacía
                             $result = $conn->query("SELECT DISTINCT clasificacion FROM vista_material WHERE clasificacion IS NOT NULL ORDER BY clasificacion");
+                             // fetch_assoc() trae una fila a la vez como arreglo el while sigue ejecutándose mientras haya filas
                             while ($row = $result->fetch_assoc()) {
                                 echo '<option value="' . htmlspecialchars($row['clasificacion']) . '">' . htmlspecialchars($row['clasificacion']) . '</option>';
                             }
@@ -216,13 +218,13 @@ $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── Navegación sidebar ───────────────────────────────────────────
+// ── Navegación sidebar 
 function seleccionarBoton(btn) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
 }
 
-// ── Chips de filtro ──────────────────────────────────────────────
+// ── Chips de filtro 
 let campoActivo    = 'todo';
 let timeoutBusqueda = null;
 let paginaActual   = 1;
@@ -242,11 +244,12 @@ function setChip(el) {
     buscarMaterial();
 }
 
-// ── Búsqueda con debounce (espera 300ms antes de buscar) ─────────
+// ── Búsqueda de material
 function buscarMaterial() {
     clearTimeout(timeoutBusqueda);
     timeoutBusqueda = setTimeout(() => _ejecutarBusqueda(1), 300);
 }
+//recolecta todos los filtros
 function _ejecutarBusqueda(pagina = 1) {
     paginaActual = pagina;
     const q              = document.getElementById('buscador').value.trim();
@@ -258,7 +261,7 @@ function _ejecutarBusqueda(pagina = 1) {
     const params = new URLSearchParams({
         q, campo: campoActivo, clasificacion, tipo, estado, orden, pagina
     });
-
+// petición HTTP al servidor en segundo plano sin recargar la página
     fetch('buscar_material.php?' + params)
         .then(r => r.json())
         .then(data => {
@@ -269,6 +272,92 @@ function _ejecutarBusqueda(pagina = 1) {
         })
         .catch(() => mostrarError('Error de conexión con el servidor.'));
 }
+//buscar_material.php regresa un JSON un formato de datos para dibujar las tarjetas y la paginación sin recargar nada
+// Renderizar tarjetas horizontales 
+function renderTarjetas(materiales) {
+    const cont  = document.getElementById('listaResultados');
+    const count = document.getElementById('resCount');
+
+    count.textContent = materiales.length + ' resultado' +
+        (materiales.length !== 1 ? 's' : '') + ' encontrado' +
+        (materiales.length !== 1 ? 's' : '');
+
+    if (!materiales.length) {
+        cont.innerHTML = '<div class="sin-resultados">No se encontraron materiales para tu búsqueda.</div>';
+        return;
+    }
+
+        // Colores según clasificación (área o carrera)
+        //Es un objeto donde cada clasificación tiene tres colores
+    const paleta = {
+        'Ciencias':      { bg: '#e1f5ee', tc: '#085041', sp: '#1d9e75' },
+        'Programacion':  { bg: '#f5f0c0', tc: '#5a5200', sp: '#c8c200' },
+        'Programación':  { bg: '#f5f0c0', tc: '#5a5200', sp: '#c8c200' },
+        'Economia':      { bg: '#e6f1fb', tc: '#0c447c', sp: '#378add' },
+        'Economía':      { bg: '#e6f1fb', tc: '#0c447c', sp: '#378add' },
+        'Ingenieria':    { bg: '#eaf3de', tc: '#27500a', sp: '#639922' },
+        'Ingeniería':    { bg: '#eaf3de', tc: '#27500a', sp: '#639922' },
+        'Sistemas':      { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
+        'Matematicas':   { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
+        'Matemáticas':   { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
+    };
+        // Colores por defecto
+        const def = { bg: '#f1efe8', tc: '#444441', sp: '#888780' };
+        //Para cada libro en la lista decide
+        cont.innerHTML = materiales.map(m => {
+        const c   = paleta[m.clasificacion] || def;
+        const d   = parseInt(m.disponibles     ?? 0);
+        const e   = parseInt(m.totalEjemplares ?? 0);
+
+        // Color del número según disponibilidad
+        const col = d === 0 ? '#e24b4a' : d <= 1 ? '#ba7517' : '#27500a';
+        const cls = d === 0 ? 'badge-rojo' : d <= 1 ? 'badge-amarillo' : 'badge-verde';
+        const lbl = d === 0 ? 'Sin disponibles' : d + ' de ' + e + ' disp.';
+
+        // Si no es prestable, mostrar badge gris
+        const badgeDisp = m.esPrestable === 'no'
+            ? '<span class="hcard-badge badge-gris">Solo consulta</span>'
+            : '<span class="hcard-badge ' + cls + '">' + lbl + '</span>';
+
+        const dispNum = m.esPrestable === 'no'
+            ? '<div class="hcard-disp-num" style="color:#888;">—</div>'
+            : '<div class="hcard-disp-num" style="color:' + col + ';">' + d + '</div>';
+        //Columna izquierda — El ícono del libro 
+        return `
+        
+        <div class="hcard" >
+            <div class="hcard-icono" style="background:${c.bg};">
+                <div class="hcard-spine" style="background:${c.sp};"></div>
+                <svg width="20" height="26" viewBox="0 0 20 26" fill="none" stroke="${c.tc}" stroke-width="1.6">
+                    <rect x="3" y="1" width="13" height="21" rx="1"/>
+                    <path d="M6 1v21"/>
+                    <path d="M16 5h2v18H6"/>
+                </svg>
+            </div>
+            <!-- Columna central — La información del libro -->
+            <div class="hcard-main">
+                <div class="hcard-title">${m.titulo}</div>
+                <div class="hcard-sub">${m.autor} · ${m.editorial} · ${m.anioPublicacion ?? ''}</div>
+                <div class="hcard-pills">
+                    <span class="hpill">${m.tipoMaterial}</span>
+                    ${m.clasificacion ? '<span class="hpill">' + m.clasificacion + '</span>' : ''}
+                    ${m.isbn          ? '<span class="hpill">ISBN: ' + m.isbn + '</span>'    : ''}
+                    ${m.edicion       ? '<span class="hpill">' + m.edicion + ' ed.</span>'  : ''}
+                </div>
+            </div>
+            <div class="hcard-right">
+            <!-- Columna derecha — Disponibilidad -->
+                <div>
+                    ${dispNum}
+                    <div class="hcard-disp-lbl">${m.esPrestable === 'no' ? 'no prestable' : 'disponibles'}</div>
+                </div>
+                ${badgeDisp}
+                <button class="hcard-det-btn" onclick="event.stopPropagation(); verDetalle(${m.idMaterial})">Ver detalle</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
 
 function renderPaginacion(pagina, totalPaginas, total) {
     const count = document.getElementById('resCount');
@@ -298,86 +387,6 @@ function renderPaginacion(pagina, totalPaginas, total) {
     document.getElementById('listaResultados').insertAdjacentHTML('beforeend', html);
 }
 
-// ── Renderizar tarjetas horizontales ────────────────────────────
-function renderTarjetas(materiales) {
-    const cont  = document.getElementById('listaResultados');
-    const count = document.getElementById('resCount');
-
-    count.textContent = materiales.length + ' resultado' +
-        (materiales.length !== 1 ? 's' : '') + ' encontrado' +
-        (materiales.length !== 1 ? 's' : '');
-
-    if (!materiales.length) {
-        cont.innerHTML = '<div class="sin-resultados">No se encontraron materiales para tu búsqueda.</div>';
-        return;
-    }
-
-    // Colores según clasificación (área o carrera)
-    const paleta = {
-        'Ciencias':      { bg: '#e1f5ee', tc: '#085041', sp: '#1d9e75' },
-        'Programacion':  { bg: '#f5f0c0', tc: '#5a5200', sp: '#c8c200' },
-        'Programación':  { bg: '#f5f0c0', tc: '#5a5200', sp: '#c8c200' },
-        'Economia':      { bg: '#e6f1fb', tc: '#0c447c', sp: '#378add' },
-        'Economía':      { bg: '#e6f1fb', tc: '#0c447c', sp: '#378add' },
-        'Ingenieria':    { bg: '#eaf3de', tc: '#27500a', sp: '#639922' },
-        'Ingeniería':    { bg: '#eaf3de', tc: '#27500a', sp: '#639922' },
-        'Sistemas':      { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
-        'Matematicas':   { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
-        'Matemáticas':   { bg: '#faeeda', tc: '#633806', sp: '#ba7517' },
-    };
-    const def = { bg: '#f1efe8', tc: '#444441', sp: '#888780' };
-
-    cont.innerHTML = materiales.map(m => {
-        const c   = paleta[m.clasificacion] || def;
-        const d   = parseInt(m.disponibles     ?? 0);
-        const e   = parseInt(m.totalEjemplares ?? 0);
-
-        // Color del número según disponibilidad
-        const col = d === 0 ? '#e24b4a' : d <= 1 ? '#ba7517' : '#27500a';
-        const cls = d === 0 ? 'badge-rojo' : d <= 1 ? 'badge-amarillo' : 'badge-verde';
-        const lbl = d === 0 ? 'Sin disponibles' : d + ' de ' + e + ' disp.';
-
-        // Si no es prestable, mostrar badge gris
-        const badgeDisp = m.esPrestable === 'no'
-            ? '<span class="hcard-badge badge-gris">Solo consulta</span>'
-            : '<span class="hcard-badge ' + cls + '">' + lbl + '</span>';
-
-        const dispNum = m.esPrestable === 'no'
-            ? '<div class="hcard-disp-num" style="color:#888;">—</div>'
-            : '<div class="hcard-disp-num" style="color:' + col + ';">' + d + '</div>';
-
-        return `
-        <div class="hcard" onclick="verDetalle(${m.idMaterial})">
-            <div class="hcard-icono" style="background:${c.bg};">
-                <div class="hcard-spine" style="background:${c.sp};"></div>
-                <svg width="20" height="26" viewBox="0 0 20 26" fill="none" stroke="${c.tc}" stroke-width="1.6">
-                    <rect x="3" y="1" width="13" height="21" rx="1"/>
-                    <path d="M6 1v21"/>
-                    <path d="M16 5h2v18H6"/>
-                </svg>
-            </div>
-            <div class="hcard-main">
-                <div class="hcard-title">${m.titulo}</div>
-                <div class="hcard-sub">${m.autor} · ${m.editorial} · ${m.anioPublicacion ?? ''}</div>
-                <div class="hcard-pills">
-                    <span class="hpill">${m.tipoMaterial}</span>
-                    ${m.clasificacion ? '<span class="hpill">' + m.clasificacion + '</span>' : ''}
-                    ${m.isbn          ? '<span class="hpill">ISBN: ' + m.isbn + '</span>'    : ''}
-                    ${m.edicion       ? '<span class="hpill">' + m.edicion + ' ed.</span>'  : ''}
-                </div>
-            </div>
-            <div class="hcard-right">
-                <div>
-                    ${dispNum}
-                    <div class="hcard-disp-lbl">${m.esPrestable === 'no' ? 'no prestable' : 'disponibles'}</div>
-                </div>
-                ${badgeDisp}
-                <button class="hcard-det-btn" onclick="event.stopPropagation(); verDetalle(${m.idMaterial})">Ver detalle</button>
-            </div>
-        </div>`;
-    }).join('');
-}
-
 function mostrarError(msg) {
     document.getElementById('listaResultados').innerHTML =
         '<div class="sin-resultados">' + msg + '</div>';
@@ -390,6 +399,8 @@ function verDetalle(id) {
         .then(data => {
             if (!data.ok) return;
             const m = data.material;
+            const esAdmin = <?= ($_SESSION['tipoUsuario'] === 'Administrador') ? 'true' : 'false' ?>;
+
             Swal.fire({
                 title: m.titulo,
                 html: `
@@ -408,9 +419,44 @@ function verDetalle(id) {
                             <td><b>${m.esPrestable === 'si' ? 'Sí' : 'No'}</b></td></tr>
                     </table>`,
                 confirmButtonColor: '#198754',
-                confirmButtonText: 'Cerrar'
+                confirmButtonText: 'Cerrar',
+                showDenyButton: esAdmin,
+                denyButtonText: 'Dar de baja',
+                denyButtonColor: '#cd5e5e'
+            }).then(result => {
+                if (result.isDenied) {
+                    darDeBaja(id);
+                }
             });
         });
+}
+
+function darDeBaja(id) {
+    Swal.fire({
+        title: '¿Dar de baja?',
+        text: 'Todos los ejemplares quedarán como baja y no podrán prestarse. El historial se conserva.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#a32d2d',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, dar de baja',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            const fd = new FormData();
+            fd.append('idMaterial', id);
+            fetch('baja_material.php', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        Swal.fire({ icon: 'success', title: '¡Dado de baja!', text: data.mensaje, confirmButtonColor: '#198754' })
+                        .then(() => _ejecutarBusqueda(paginaActual));
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#dc3545' });
+                    }
+                });
+        }
+    });
 }
 
 // ── Formulario agregar material ──────────────────────────────────
@@ -468,6 +514,33 @@ function confirmarLogout() {
         }
     });
 }
+function validarFormulario() {
+    const titulo = document.querySelector('[name="titulo"]').value.trim();
+    const autor  = document.querySelector('[name="autor"]').value.trim();
+    const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s.,'-]+$/;
+
+    if (!titulo) {
+        Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'El título es obligatorio.', confirmButtonColor: '#b8b800' });
+        return;
+    }
+    if (!autor) {
+        Swal.fire({ icon: 'warning', title: 'Campo requerido', text: 'El autor es obligatorio.', confirmButtonColor: '#b8b800' });
+        return;
+    }
+    if (!soloLetras.test(autor)) {
+        Swal.fire({ icon: 'warning', title: 'Autor inválido', text: 'El autor solo debe contener letras.', confirmButtonColor: '#b8b800' });
+        return;
+    }
+    if (!soloLetras.test(titulo)) {
+        Swal.fire({ icon: 'warning', title: 'Título inválido', text: 'El título solo debe contener letras.', confirmButtonColor: '#b8b800' });
+        return;
+    }
+
+    document.querySelector('form').submit();
+}
+
 </script>
+
+
 </body>
 </html>

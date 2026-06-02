@@ -14,22 +14,22 @@ if (!$idRol) {
     exit;
 }
 
-try {
-    // Obtener datos del rol
-    $stmtRol = $pdo->prepare("SELECT descripcion FROM Rol WHERE idRol = ?");
-    $stmtRol->execute([$idRol]);
-    $rol = $stmtRol->fetch();
+// Obtener datos del rol
+$stmtRol = $conn->prepare("SELECT descripcion FROM Rol WHERE idRol = ?");
+$stmtRol->bind_param("i", $idRol);
+$stmtRol->execute();
+$rol = $stmtRol->get_result()->fetch_assoc();
 
-    // Obtener permisos del rol
-    $stmt = $pdo->prepare("SELECT idPermiso FROM RolPermiso WHERE idRol = ?");
-    $stmt->execute([$idRol]);
-    $permisos = array_column($stmt->fetchAll(), 'idPermiso');
+// Obtener permisos del rol
+$stmt = $conn->prepare("SELECT idPermiso FROM RolPermiso WHERE idRol = ?");
+$stmt->bind_param("i", $idRol);
+$stmt->execute();
+$rows     = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$permisos = array_column($rows, 'idPermiso');
 
-    echo json_encode([
-        'ok'          => true,
-        'descripcion' => $rol['descripcion'] ?? '',
-        'permisos'    => $permisos
-    ]);
-} catch (Exception $e) {
-    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
-}
+echo json_encode([
+    'ok'          => true,
+    'descripcion' => $rol['descripcion'] ?? '',
+    'permisos'    => $permisos
+]);
+?>

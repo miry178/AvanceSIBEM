@@ -347,3 +347,14 @@ INSERT INTO Prestamo (idUsuario, correoInst, idEjemplar, fechaPrestamo, fechaDev
 ('233110182', 'L233110182@cdconstitucion.tecnm.mx', 11, '2026-05-29', '2026-06-07', 'activo'),
 ('DOC001',    'D001@cdconstitucion.tecnm.mx',       14, '2026-05-27', '2026-06-03', 'activo');
 
+SELECT titulo, disponibles, totalEjemplares 
+FROM vista_material 
+ORDER BY disponibles ASC;
+
+SELECT 
+    SUM(CASE WHEN disponibles > 0 THEN 1 ELSE 0 END) AS con_disponibles,
+    SUM(CASE WHEN disponibles = 0 THEN 1 ELSE 0 END) AS sin_disponibles
+FROM vista_material;
+use biblioteca;
+select * from usuario;
+SELECT pagada, COUNT(*), SUM(monto) FROM Multa GROUP BY pagada;

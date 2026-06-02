@@ -1,18 +1,15 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
-if ($conn->connect_error) die("Error de conexión: " . $conn->connect_error);
+require_once '../../bd/conexion.php';
 
 $areas       = $conn->query("SELECT * FROM Area");
 $carreras    = $conn->query("SELECT * FROM Carrera");
 $tipos       = $conn->query("SELECT * FROM TipoMaterial");
 $editoriales = $conn->query("SELECT * FROM Editorial ORDER BY nombre");
 
-// Guardar resultados en arrays para usarlos en JS y PHP
 $areasArr       = $areas->fetch_all(MYSQLI_ASSOC);
 $carrerasArr    = $carreras->fetch_all(MYSQLI_ASSOC);
 $tiposArr       = $tipos->fetch_all(MYSQLI_ASSOC);
 $editorialesArr = $editoriales->fetch_all(MYSQLI_ASSOC);
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -21,6 +18,7 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIBEM - Agregar Material</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="add-libro-diseno.css">
 </head>
 <body>
@@ -132,9 +130,10 @@ $conn->close();
         </div>
 
         <div class="d-flex justify-content-end gap-2 mt-2">
-            <button type="submit" class="btn btn-success px-4">Agregar Material</button>
+            <button type="button" class="btn btn-success px-4" onclick="validarFormulario()">Agregar Material</button>
             <button type="button" class="btn btn-danger px-4" onclick="cerrarFormulario()">Cancelar</button>
         </div>
     </form>
 </div>
-
+</body>
+</html>

@@ -117,7 +117,9 @@ $moduloInfo = [
                 <div class="roles-list">
                     <div class="roles-list-hdr">
                         <span>Roles</span>
+                        <?php if ($esAdmin): ?>
                         <button class="btn-nuevo-rol" onclick="abrirModalNuevo()">+ Nuevo Rol</button>
+                        <?php endif; ?>
                     </div>
                     <div class="roles-items">
                         <?php foreach ($roles as $i => $rol): ?>
@@ -156,13 +158,13 @@ $moduloInfo = [
                                 <div class="detail-title" id="detailTitle">—</div>
                                 <div class="detail-sub" id="detailSub">—</div>
                             </div>
-                            <div class="detail-btns">
-                                <?php if ($esAdmin): ?>
-                                <button class="btn-eliminar-rol" onclick="eliminarRol()">Eliminar rol</button>
-                                <?php endif; ?>
-                                <button class="btn-editar-nombre" onclick="abrirModalEditar()">Editar nombre</button>
-                                <button class="btn-guardar" onclick="guardarPermisos()">Guardar cambios</button>
-                            </div>
+                        <div class="detail-btns">
+                            <?php if ($esAdmin): ?>
+                            <button class="btn-eliminar-rol" onclick="eliminarRol()">Eliminar rol</button>
+                            <button class="btn-editar-nombre" onclick="abrirModalEditar()">Editar nombre</button>
+                            <button class="btn-guardar" onclick="guardarPermisos()">Guardar cambios</button>
+                            <?php endif; ?>
+                        </div>
                         </div>
 
                         <!-- Datos -->
@@ -191,9 +193,10 @@ $moduloInfo = [
                                         <?php foreach ($perms as $p): ?>
                                         <label class="check-item">
                                             <input type="checkbox"
-                                                   class="perm-check"
-                                                   data-id="<?= $p['idPermiso'] ?>"
-                                                   data-modulo="<?= $modulo ?>">
+                                            class="perm-check"
+                                            data-id="<?= $p['idPermiso'] ?>"
+                                            data-modulo="<?= $modulo ?>"
+                                            <?= !$esAdmin ? 'disabled' : '' ?>>
                                             <?= htmlspecialchars($p['descripcion']) ?>
                                         </label>
                                         <?php endforeach; ?>

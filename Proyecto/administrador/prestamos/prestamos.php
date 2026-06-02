@@ -11,8 +11,8 @@ if (!isset($_SESSION['idUsuario'])) {
 
 require_once '../../bd/conexion.php';
 
-$puedeAgregar  = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'agregar');
-$puedeDevolver = tienePermiso($pdo, $_SESSION['idUsuario'], 'prestamos', 'devolver');
+$puedeAgregar  = tienePermiso($conn, $_SESSION['idUsuario'], 'prestamos', 'agregar');
+$puedeDevolver = tienePermiso($conn, $_SESSION['idUsuario'], 'prestamos', 'devolver');
 $esPersonal    = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
 

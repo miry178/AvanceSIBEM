@@ -1,9 +1,5 @@
 <?php
-$pdo = new PDO("mysql:host=localhost;dbname=biblioteca;charset=utf8mb4", "root", "5775", [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-]);
-
+require_once '../../bd/conexion.php';
 header('Content-Type: application/json');
 
 $idMaterial = intval($_GET['id'] ?? 0);
@@ -12,15 +8,15 @@ if (!$idMaterial) {
     exit;
 }
 
-try {
-    $stmt = $pdo->prepare("SELECT * FROM vista_material WHERE idMaterial = ?");
-    $stmt->execute([$idMaterial]);
-    $m = $stmt->fetch();
-    if ($m) {
-        echo json_encode(['ok' => true, 'material' => $m]);
-    } else {
-        echo json_encode(['ok' => false, 'error' => 'No encontrado']);
-    }
-} catch (Exception $e) {
-    echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+// Buscar el material por ID en la vista
+$stmt = $conn->prepare("SELECT * FROM vista_material WHERE idMaterial = ?");
+$stmt->bind_param("i", $idMaterial);
+$stmt->execute();
+$m = $stmt->get_result()->fetch_assoc();
+
+if ($m) {
+    echo json_encode(['ok' => true, 'material' => $m]);
+} else {
+    echo json_encode(['ok' => false, 'error' => 'No encontrado']);
 }
+?>

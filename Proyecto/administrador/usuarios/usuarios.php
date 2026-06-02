@@ -19,9 +19,9 @@ if ($esPersonal) {
     exit();
 }
 
-$puedeAgregar    = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'agregar');
-$puedeEditar     = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'editar');
-$puedeDesactivar = tienePermiso($pdo, $_SESSION['idUsuario'], 'usuarios', 'desactivar');
+$puedeAgregar    = tienePermiso($conn, $_SESSION['idUsuario'], 'usuarios', 'agregar');
+$puedeEditar     = tienePermiso($conn, $_SESSION['idUsuario'], 'usuarios', 'editar');
+$puedeDesactivar = tienePermiso($conn, $_SESSION['idUsuario'], 'usuarios', 'desactivar');
 
 $carreras   = $conn->query("SELECT idCarrera, descripcion FROM Carrera ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
 $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER BY descripcion")->fetch_all(MYSQLI_ASSOC);
@@ -176,7 +176,6 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
         </div>
     </div>
 </div>
-
 <!-- ── MODAL NUEVO / EDITAR ── -->
 <div class="mbg" id="mbgForm">
     <div class="modal-sibem">
@@ -206,19 +205,80 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
         <fieldset>
             <legend>Tipo de persona</legend>
             <div class="radio-row">
+                <label class="rl">
+                    <input type="radio" name="fTipoPersona" value="alumno" onchange="cambiarTipoPersona('alumno')">
+                    Alumno
+                </label>
+                <label class="rl">
+                    <input type="radio" name="fTipoPersona" value="docente" onchange="cambiarTipoPersona('docente')">
+                    Docente
+                </label>
+                <label class="rl">
+                    <input type="radio" name="fTipoPersona" value="personal" onchange="cambiarTipoPersona('personal')">
+                    Personal Bibliotecario
+                </label>
+            </div>
+        </fieldset>
+
+        <!-- Carrera — solo Alumnos -->
+        <div class="campo-extra" id="campoCarrera" style="display:none;">
+            <div class="fl">
+                <label>Carrera *</label>
+                <select id="fCarrera">
+                    <option value="">Selecciona una carrera</option>
+                    <?php foreach ($carreras as $c): ?>
+                        <option value="<?= $c['idCarrera'] ?>"><?= htmlspecialchars($c['descripcion']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <!-- División — solo Docentes -->
+        <div class="campo-extra" id="campoDivision" style="display:none;">
+            <div class="fl">
+                <label>División *</label>
+                <select id="fDivision">
+                    <option value="">Selecciona una división</option>
+                    <?php foreach ($divisiones as $d): ?>
+                        <option value="<?= $d['idDivision'] ?>"><?= htmlspecialchars($d['descripcion']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <!-- Rol — solo Personal -->
+    <div id="campoRol" style="display:none;">
+        <fieldset>
+            <legend>Rol en el sistema</legend>
+            <div class="radio-row">
                 <?php
-                // Cargado dinámicamente desde BD
-                        $tipos = $conn->query("SELECT idRol, descripcion FROM Rol ORDER BY idRol");
-                        while ($tipo = $tipos->fetch_assoc()) {
-                            echo '<label class="rl">
-                            <input type="radio" name="fTipo" value="' . $tipo['idRol'] . '"
-                            onchange="cambiarTipo(' . $tipo['idRol'] . ')">
-                        ' . htmlspecialchars($tipo['descripcion']) . '
+                $rolesQuery = $conn->query("SELECT idRol, descripcion FROM Rol WHERE idRol != 1 ORDER BY idRol");
+                while ($rol = $rolesQuery->fetch_assoc()) {
+                    echo '<label class="rl">
+                        <input type="radio" name="fTipo" value="' . $rol['idRol'] . '">
+                        ' . htmlspecialchars($rol['descripcion']) . '
                     </label>';
                 }
                 ?>
-                
+            </div>
+        </fieldset>
+    </div>
 
+        <fieldset>
+            <legend>Estado</legend>
+            <div class="radio-row">
+                <label class="rl"><input type="radio" name="fEstado" value="si" checked> Activo</label>
+                <label class="rl"><input type="radio" name="fEstado" value="no"> Inactivo</label>
+            </div>
+        </fieldset>
+
+        <div class="form-btns">
+            <button class="btn-red" id="btnEliminar" style="display:none;" onclick="eliminarUsuario()">Desactivar</button>
+            <button class="btn-yel" onclick="cerrar('mbgForm')">Cancelar</button>
+            <button class="btn-grn" onclick="guardarUsuario()">Guardar</button>
+        </div>
+    </div>
+</div>
 
 
             </div>
@@ -367,10 +427,12 @@ function abrirModalNuevo() {
     document.getElementById('fNombre').value  = '';
     document.getElementById('fCorreo').value  = '';
     document.getElementById('fId').readOnly   = false;
+    document.querySelectorAll('input[name="fTipoPersona"]').forEach(r => r.checked = false);
     document.querySelectorAll('input[name="fTipo"]').forEach(r => r.checked = false);
     document.querySelectorAll('input[name="fEstado"]').forEach(r => r.checked = r.value === 'si');
     document.getElementById('campoCarrera').style.display  = 'none';
     document.getElementById('campoDivision').style.display = 'none';
+    document.getElementById('campoRol').style.display      = 'none';
     document.getElementById('btnEliminar').style.display   = 'none';
     document.getElementById('mbgForm').classList.add('open');
 }
@@ -418,11 +480,29 @@ function verificarId(valor) {
         });
 }
 
-// Alumno = 5, Docente = 4
-function cambiarTipo(tipo) {
-    tipo = parseInt(tipo);
-    document.getElementById('campoCarrera').style.display  = tipo === 5 ? 'block' : 'none';
-    document.getElementById('campoDivision').style.display = tipo === 4 ? 'block' : 'none';
+function cambiarTipoPersona(tipo) {
+    // Ocultar todos los campos extra primero
+    document.getElementById('campoCarrera').style.display  = 'none';
+    document.getElementById('campoDivision').style.display = 'none';
+    document.getElementById('campoRol').style.display      = 'none';
+
+    // Limpiar selección de rol
+    document.querySelectorAll('input[name="fTipo"]').forEach(r => r.checked = false);
+
+    if (tipo === 'alumno') {
+        // Alumno → mostrar carrera, asignar rol Invitado automáticamente
+        document.getElementById('campoCarrera').style.display = 'block';
+        const invitado = document.querySelector('input[name="fTipo"][value="3"]');
+        if (invitado) invitado.checked = true;
+    } else if (tipo === 'docente') {
+        // Docente → mostrar división, asignar rol Invitado automáticamente
+        document.getElementById('campoDivision').style.display = 'block';
+        const invitado = document.querySelector('input[name="fTipo"][value="3"]');
+        if (invitado) invitado.checked = true;
+    } else if (tipo === 'personal') {
+        // Personal → mostrar selector de rol
+        document.getElementById('campoRol').style.display = 'block';
+    }
 }
 
 function guardarUsuario() {
@@ -433,7 +513,13 @@ function guardarUsuario() {
     const estadoEl = document.querySelector('input[name="fEstado"]:checked');
 
     if (!id || !nombre || !correo || !tipoEl) {
-        Swal.fire({ icon:'warning', title:'Campos incompletos', text:'Llena todos los campos obligatorios.', confirmButtonColor:'#b8b800' });
+    Swal.fire({ icon:'warning', title:'Campos incompletos', text:'Llena todos los campos obligatorios.', confirmButtonColor:'#b8b800' });
+    return;
+}
+    // Validar que el nombre solo tenga letras
+    const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s.'-]+$/;
+    if (!soloLetras.test(nombre)) {
+        Swal.fire({ icon:'warning', title:'Nombre inválido', text:'El nombre solo debe contener letras.', confirmButtonColor:'#b8b800' });
         return;
     }
 
