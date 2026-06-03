@@ -373,7 +373,7 @@ function eliminarRol() {
     Swal.fire({
         icon: 'warning',
         title: '¿Eliminar rol?',
-        text: 'Se eliminará el rol y sus permisos. Los usuarios con este rol quedarán sin rol asignado.',
+        text: 'Se eliminará el rol y sus permisos. Los usuarios con este rol se asignaran como Invitado.',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
         cancelButtonColor: '#aaa',

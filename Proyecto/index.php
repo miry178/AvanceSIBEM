@@ -4,6 +4,7 @@ if (isset($_SESSION['idUsuario']) && isset($_SESSION['nombre']) && isset($_SESSI
     header("Location: administrador/home/inicio.php");
     exit();
 }
+// Eliminar la cache cuando un usuario cierra sesión
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -55,17 +56,18 @@ $exito = $_GET["exito"] ?? "";
                     <div class="row align-items-center g-3">
 
                         <div class="col-12 col-md-6" >
-                        <img src="/ProyectoBiblioteca/Proyecto/administrador/img/biblioteca.png" alt="Biblioteca" 
+                        <img src="/ProyectoBiblioteca/Proyecto/administrador/img/biblioteca.jpeg" alt="Biblioteca" 
                             style="width:100%; height:250px; object-fit:cover; border-radius:8px;">
                                 
                     </div>
 
                         <div class="col-12 col-md-6 px-md-4">
-                            <h4 class="text-center fw-bold mb-3">Welcome back to SIBEM</h4>
+                            <h4 class="text-center fw-bold mb-3">Bienvenido a SIBEM</h4>
                             <div class="text-center mb-4">
                                 <img src="administrador/img/Logo.png" alt="Logo ITS Ciudad Constitución"
                                      style="max-height: 80px;" onerror="this.style.display='none'">
                             </div>
+                            
                             <form action="php/php_login/login.php" method="POST">
                                 <div class="mb-3">
                                     <div class="input-group">
@@ -107,9 +109,11 @@ $exito = $_GET["exito"] ?? "";
 </main>
 
 <script>
+    //Creamos las variables en js para que guarde información del formulario
 const togglePassword = document.getElementById('togglePassword');
 const campoPassword  = document.getElementById('password');
 const iconoOjo       = document.getElementById('iconoOjo');
+
 togglePassword.addEventListener('click', function () {
     if (campoPassword.type === 'password') {
         campoPassword.type = 'text';

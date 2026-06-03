@@ -367,6 +367,21 @@ function filtrar() {
         tr.style.display = (okQ && okE) ? '' : 'none';
         if (okQ && okE) count++;
     });
+
+    // Mostrar mensaje si no hay resultados
+    const tbody = document.getElementById('tablaBody');
+    const sinResultados = document.getElementById('sinResultadosPrestamos');
+    if (count === 0) {
+        if (!sinResultados) {
+            const tr = document.createElement('tr');
+            tr.id = 'sinResultadosPrestamos';
+            tr.innerHTML = '<td colspan="7" style="text-align:center;color:#aaa;padding:20px;">No se encontraron préstamos</td>';
+            tbody.appendChild(tr);
+        }
+    } else {
+        if (sinResultados) sinResultados.remove();
+    }
+
     document.getElementById('resCount').textContent = count + ' préstamo' + (count !== 1 ? 's' : '') + ' encontrado' + (count !== 1 ? 's' : '');
 }
 

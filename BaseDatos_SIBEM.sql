@@ -350,11 +350,10 @@ INSERT INTO Prestamo (idUsuario, correoInst, idEjemplar, fechaPrestamo, fechaDev
 SELECT titulo, disponibles, totalEjemplares 
 FROM vista_material 
 ORDER BY disponibles ASC;
-
-SELECT 
-    SUM(CASE WHEN disponibles > 0 THEN 1 ELSE 0 END) AS con_disponibles,
-    SUM(CASE WHEN disponibles = 0 THEN 1 ELSE 0 END) AS sin_disponibles
-FROM vista_material;
 use biblioteca;
-select * from usuario;
-SELECT pagada, COUNT(*), SUM(monto) FROM Multa GROUP BY pagada;
+SELECT titulo, disponibles, totalEjemplares FROM vista_material;
+
+SELECT idMaterial, titulo FROM Material 
+WHERE idMaterial NOT IN (SELECT DISTINCT idMaterial FROM Ejemplar);
+
+DELETE FROM Material WHERE idMaterial IN (12, 14, 16);

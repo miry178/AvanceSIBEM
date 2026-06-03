@@ -18,19 +18,21 @@ if (!empty($_POST['eliminar'])) {
     }
     $idRol = intval($_POST['idRol'] ?? 0);
     if (!$idRol) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
-    if ($idRol === 1) { echo json_encode(['ok' => false, 'error' => 'El rol Administrador no puede eliminarse']); exit; }
-
+    if (in_array($idRol, [1, 2, 3])) { 
+    echo json_encode(['ok' => false, 'error' => 'Los roles base (Administrador, Encargado, Invitado) no pueden eliminarse']); 
+    exit; 
+}
     $conn->begin_transaction();
     try {
         $s1 = $conn->prepare("DELETE FROM RolPermiso WHERE idRol = ?");
         $s1->bind_param("i", $idRol);
         $s1->execute();
 
-        $s2 = $conn->prepare("UPDATE Usuario SET idRol = NULL WHERE idRol = ?");
+        $s2 = $conn->prepare("UPDATE Usuario SET idRol = 3 WHERE idRol = ?");
         $s2->bind_param("i", $idRol);
         $s2->execute();
 
-        $s3 = $conn->prepare("DELETE FROM RelRol WHERE idRol = ?");
+        $s3 = $conn->prepare("UPDATE RelRol SET idRol = 3 WHERE idRol = ?");
         $s3->bind_param("i", $idRol);
         $s3->execute();
 

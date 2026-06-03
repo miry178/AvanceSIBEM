@@ -279,52 +279,6 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
         </div>
     </div>
 </div>
-
-
-            </div>
-        </fieldset>
-
-        <!-- Carrera — solo Alumnos (idTipoPersona = 5) -->
-        <div class="campo-extra" id="campoCarrera">
-            <div class="fl">
-                <label>Carrera *</label>
-                <select id="fCarrera">
-                    <option value="">Selecciona una carrera</option>
-                    <?php foreach ($carreras as $c): ?>
-                        <option value="<?= $c['idCarrera'] ?>"><?= htmlspecialchars($c['descripcion']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-
-        <!-- División — solo Docentes (idTipoPersona = 4) -->
-        <div class="campo-extra" id="campoDivision">
-            <div class="fl">
-                <label>División *</label>
-                <select id="fDivision">
-                    <option value="">Selecciona una división</option>
-                    <?php foreach ($divisiones as $d): ?>
-                        <option value="<?= $d['idDivision'] ?>"><?= htmlspecialchars($d['descripcion']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-        </div>
-
-        <fieldset>
-            <legend>Estado</legend>
-            <div class="radio-row">
-                <label class="rl"><input type="radio" name="fEstado" value="si" checked> Activo</label>
-                <label class="rl"><input type="radio" name="fEstado" value="no"> Inactivo</label>
-            </div>
-        </fieldset>
-
-        <div class="form-btns">
-            <button class="btn-red" id="btnEliminar" style="display:none;" onclick="eliminarUsuario()">Desactivar</button>
-            <button class="btn-yel" onclick="cerrar('mbgForm')">Cancelar</button>
-            <button class="btn-grn" onclick="guardarUsuario()">Guardar</button>
-        </div>
-    </div>
-</div>
 <script>
 const puedeEditar     = <?= $puedeEditar ? 'true' : 'false' ?>;
 const puedeDesactivar = <?= $puedeDesactivar ? 'true' : 'false' ?>;
@@ -511,11 +465,13 @@ function guardarUsuario() {
     const correo   = document.getElementById('fCorreo').value.trim();
     const tipoEl   = document.querySelector('input[name="fTipo"]:checked');
     const estadoEl = document.querySelector('input[name="fEstado"]:checked');
+    const tipoPersona = document.querySelector('input[name="fTipoPersona"]:checked')?.value;
 
-    if (!id || !nombre || !correo || !tipoEl) {
-    Swal.fire({ icon:'warning', title:'Campos incompletos', text:'Llena todos los campos obligatorios.', confirmButtonColor:'#b8b800' });
-    return;
-}
+    if (!id || !nombre || !correo || !tipoPersona) {
+        Swal.fire({ icon:'warning', title:'Campos incompletos', text:'Llena todos los campos obligatorios.', confirmButtonColor:'#b8b800' });
+        return;
+    }
+
     // Validar que el nombre solo tenga letras
     const soloLetras = /^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s.'-]+$/;
     if (!soloLetras.test(nombre)) {
@@ -523,24 +479,31 @@ function guardarUsuario() {
         return;
     }
 
-    const tipo     = tipoEl.value;
-    const estado   = estadoEl ? estadoEl.value : 'si';
     const carrera  = document.getElementById('fCarrera').value;
     const division = document.getElementById('fDivision').value;
 
-    // Alumno = 5, Docente = 4
-    if (tipo === '5' && !carrera) {
-        Swal.fire({ icon:'warning', title:'Falta la carrera', text:'Selecciona una carrera para el alumno.', confirmButtonColor:'#b8b800' }); return;
+    if (tipoPersona === 'alumno' && !carrera) {
+        Swal.fire({ icon:'warning', title:'Falta la carrera', text:'Selecciona una carrera para el alumno.', confirmButtonColor:'#b8b800' });
+        return;
     }
-    if (tipo === '4' && !division) {
-        Swal.fire({ icon:'warning', title:'Falta la división', text:'Selecciona una división para el docente.', confirmButtonColor:'#b8b800' }); return;
+    if (tipoPersona === 'docente' && !division) {
+        Swal.fire({ icon:'warning', title:'Falta la división', text:'Selecciona una división para el docente.', confirmButtonColor:'#b8b800' });
+        return;
     }
+    if (tipoPersona === 'personal' && !tipoEl) {
+        Swal.fire({ icon:'warning', title:'Falta el rol', text:'Selecciona un rol para el personal bibliotecario.', confirmButtonColor:'#b8b800' });
+        return;
+    }
+
+    const tipo   = tipoEl ? tipoEl.value : '3'; // Si no eligió rol, Invitado por defecto
+    const estado = estadoEl ? estadoEl.value : 'si';
 
     const fd = new FormData();
     fd.append('idUsuario',     id);
     fd.append('nombre',        nombre);
     fd.append('correoInst',    correo);
     fd.append('idTipoPersona', tipo);
+    fd.append('tipoPersona',   tipoPersona);
     fd.append('activo',        estado);
     fd.append('idCarrera',     carrera);
     fd.append('idDivision',    division);
