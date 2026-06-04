@@ -9,7 +9,7 @@ SELECT
         WHEN m.idCarrera IS NOT NULL THEN c.descripcion
     END AS clasificacion,
     COUNT(e.idEjemplar) AS totalEjemplares,
-    SUM(e.estado = 'disponible') AS disponibles
+    SUM(CASE WHEN e.estado = 'disponible' THEN 1 ELSE 0 END) AS disponibles
 FROM Material m
 LEFT JOIN TipoMaterial tm ON m.idTipoMaterial = tm.idTipoMaterial
 LEFT JOIN Area          a  ON m.idArea        = a.idArea
@@ -91,3 +91,9 @@ SELECT
     SUM(estado = 'vencido')  AS vencidos,
     SUM(estado = 'devuelto') AS devueltos
 FROM Prestamo;
+
+-- ── EDITORIALES ───────────────────────────────────────────────
+INSERT INTO Editorial (nombre) VALUES
+('McGraw-Hill'),('Pearson'),('Editorial Medica Panamericana'),
+('Thomson International'),('Editorial Reverte'),('Addison Wesley'),
+('Prentice Hall'),('Paraninfo'),('Alfaguara'),('Salamandra'),('Peralta');

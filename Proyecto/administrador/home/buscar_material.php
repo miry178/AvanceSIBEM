@@ -9,7 +9,7 @@ $tipo          = trim($_GET['tipo']          ?? '');
 $estado        = trim($_GET['estado']        ?? '');
 $orden         = trim($_GET['orden']         ?? 'titulo');
 $pagina        = max(1, intval($_GET['pagina'] ?? 1));
-$porPagina     = 3;
+$porPagina     = 6;
 $offset        = ($pagina - 1) * $porPagina;
 
 $where  = ['1=1'];

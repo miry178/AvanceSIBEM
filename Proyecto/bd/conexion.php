@@ -9,6 +9,11 @@ $usuario  = "root";
 $password = "5775";
 $bd       = "biblioteca";
 
+//$host     = "localhost";
+//$usuario  = "u310586406_sibem";
+//$password = "Miry18nov";
+//$bd       = "u310586406_biblioteca";
+
 $conn = new mysqli($host, $usuario, $password, $bd);
 
 if ($conn->connect_error) {
