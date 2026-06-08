@@ -4,8 +4,14 @@ require_once '../../bd/conexion.php';
 
 // ── DESACTIVAR usuario ─────────────────────────────────────────
 if (!empty($_POST['eliminar'])) {
+    session_start();
     $id = trim($_POST['idUsuario'] ?? '');
     if (!$id) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
+
+    if ($id === ($_SESSION['idUsuario'] ?? '')) {
+        echo json_encode(['ok' => false, 'error' => 'No puedes desactivar tu propia cuenta mientras estás en sesión.']);
+        exit;
+    }
 
     $stmt = $conn->prepare("UPDATE Usuario SET activo = 'no' WHERE idUsuario = ?");
     $stmt->bind_param("s", $id);
@@ -19,9 +25,16 @@ if (!empty($_POST['eliminar'])) {
 
 // ── TOGGLE activar/desactivar ──────────────────────────────────
 if (!empty($_POST['toggle'])) {
+    session_start();
     $id     = trim($_POST['idUsuario'] ?? '');
     $activo = ($_POST['activo'] ?? '') === 'si' ? 'si' : 'no';
     if (!$id) { echo json_encode(['ok' => false, 'error' => 'ID inválido']); exit; }
+
+    // Protección: no puede desactivarse a sí mismo
+    if ($id === ($_SESSION['idUsuario'] ?? '') && $activo === 'no') {
+        echo json_encode(['ok' => false, 'error' => 'No puedes desactivar tu propia cuenta mientras estás en sesión.']);
+        exit;
+    }
 
     $stmt = $conn->prepare("UPDATE Usuario SET activo = ? WHERE idUsuario = ?");
     $stmt->bind_param("ss", $activo, $id);

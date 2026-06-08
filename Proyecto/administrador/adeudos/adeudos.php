@@ -16,32 +16,52 @@ $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 $puedeVer      = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'ver');
 $puedePagar    = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'pago');
 $puedeCondonar = tienePermiso($conn, $_SESSION['idUsuario'], 'adeudos', 'condonar');
-// ── Contadores ──
-$totalUsuarios = $conn->query("
-    SELECT COUNT(DISTINCT p.idUsuario) AS total
-    FROM Multa mu
-    JOIN Prestamo p ON mu.idPrestamo = p.idPrestamo
-    WHERE mu.pagada = 'no'
-")->fetch_assoc()['total'];
 
-$tmp = $conn->query("
-    SELECT SUM(CASE WHEN estado='vencido' THEN 1 ELSE 0 END) AS vencidos, COUNT(*) AS total
-    FROM Prestamo
-")->fetch_assoc();
-$tasaIncumplimiento = ($tmp['total'] > 0)
-    ? round(($tmp['vencidos'] / $tmp['total']) * 100) . '%' : '0%';
-
-$totalMultas = $conn->query("
-    SELECT COALESCE(SUM(monto),0) AS total FROM Multa WHERE pagada='no'
-")->fetch_assoc()['total'];
-
-// ── Datos usando la vista ──
 if ($esPersonal) {
     $idU = $_SESSION['idUsuario'];
+
+    $totalUsuarios = $conn->query("
+        SELECT COUNT(DISTINCT p.idUsuario) AS total
+        FROM Multa mu
+        JOIN Prestamo p ON mu.idPrestamo = p.idPrestamo
+        WHERE mu.pagada = 'no' AND p.idUsuario = '$idU'
+    ")->fetch_assoc()['total'];
+
+    $tmp = $conn->query("
+        SELECT SUM(CASE WHEN estado='vencido' THEN 1 ELSE 0 END) AS vencidos, COUNT(*) AS total
+        FROM Prestamo WHERE idUsuario = '$idU'
+    ")->fetch_assoc();
+
+    $totalMultas = $conn->query("
+        SELECT COALESCE(SUM(mu.monto),0) AS total
+        FROM Multa mu
+        JOIN Prestamo p ON mu.idPrestamo = p.idPrestamo
+        WHERE mu.pagada='no' AND p.idUsuario = '$idU'
+    ")->fetch_assoc()['total'];
+
     $adeudos = $conn->query("SELECT * FROM vista_adeudos WHERE idUsuario = '$idU' ORDER BY pagada ASC, monto DESC");
 } else {
+    $totalUsuarios = $conn->query("
+        SELECT COUNT(DISTINCT p.idUsuario) AS total
+        FROM Multa mu
+        JOIN Prestamo p ON mu.idPrestamo = p.idPrestamo
+        WHERE mu.pagada = 'no'
+    ")->fetch_assoc()['total'];
+
+    $tmp = $conn->query("
+        SELECT SUM(CASE WHEN estado='vencido' THEN 1 ELSE 0 END) AS vencidos, COUNT(*) AS total
+        FROM Prestamo
+    ")->fetch_assoc();
+
+    $totalMultas = $conn->query("
+        SELECT COALESCE(SUM(monto),0) AS total FROM Multa WHERE pagada='no'
+    ")->fetch_assoc()['total'];
+
     $adeudos = $conn->query("SELECT * FROM vista_adeudos ORDER BY pagada ASC, monto DESC");
 }
+
+$tasaIncumplimiento = ($tmp['total'] > 0)
+    ? round(($tmp['vencidos'] / $tmp['total']) * 100) . '%' : '0%';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -87,14 +107,12 @@ if ($esPersonal) {
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
                 Estadísticas
             </button>
-
             <?php if (!$esPersonal): ?>
             <button class="nav-btn" onclick="location.href='../roles/roles.php'">
                 <svg fill="currentColor" viewBox="0 0 20 16"><path d="M8 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1z"/><path d="M16 7l-3.5 1.4v3c0 1.4 1.2 2.5 3.5 2.8 2.3-.3 3.5-1.4 3.5-2.8v-3z" fill="white" stroke="currentColor" stroke-width="0.8"/><path d="M14.2 11l1.1 1.1 2.2-2.2" fill="none" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/></svg>
                 Roles
             </button>
             <?php endif; ?>
-
         </nav>
         <div class="sidebar-footer">
             <div class="user-row">
@@ -102,7 +120,7 @@ if ($esPersonal) {
                 <div>
                     <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
                     <div class="user-role"><?= htmlspecialchars($_SESSION['tipoUsuario'] ?? '') ?></div>
-            </div>
+                </div>
                 <button class="logout-btn" title="Cerrar sesión" onclick="confirmarLogout()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
@@ -130,8 +148,6 @@ if ($esPersonal) {
                 Swal.fire({ icon:'error', title:'Error', text:'No se pudo procesar el pago', confirmButtonColor:'#dc3545' })
                 .then(() => window.history.replaceState({}, document.title, 'adeudos.php'));
             </script>
-            
-
             <?php elseif (isset($_GET['condonada'])): ?>
             <script>
                 Swal.fire({ icon:'success', title:'¡Condonada!', text:'La multa fue eliminada del historial', confirmButtonColor:'#198754' })
@@ -146,7 +162,7 @@ if ($esPersonal) {
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="#27500a"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                     </div>
                     <div>
-                        <div class="metrica-label">Usuarios con adeudos</div>
+                        <div class="metrica-label"><?= $esPersonal ? 'Tienes adeudos' : 'Usuarios con adeudos' ?></div>
                         <div class="metrica-num"><?= $totalUsuarios ?></div>
                     </div>
                 </div>
@@ -164,67 +180,71 @@ if ($esPersonal) {
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="#633806"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
                     </div>
                     <div>
-                        <div class="metrica-label">Multas pendientes</div>
+                        <div class="metrica-label"><?= $esPersonal ? 'Mi total pendiente' : 'Multas pendientes' ?></div>
                         <div class="metrica-num">$<?= number_format($totalMultas, 2) ?></div>
                     </div>
                 </div>
             </div>
 
-                <!-- Toolbar -->
-                <div class="toolbar">
-                    <div class="search-box">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-                        <input type="text" id="buscador" placeholder="Buscar por nombre, No. Control, correo..." oninput="filtrarTabla()">
-                    </div>
-                    <select class="fsel" id="filtroTipo" onchange="filtrarTabla()">
-                        <option value="">Todos los tipos</option>
-                        <option value="alumno">Alumno</option>
-                        <option value="docente">Docente</option>
-                    </select>
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <?php if (!$esPersonal): ?>
+                <div class="search-box">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+                    <input type="text" id="buscador" placeholder="Buscar por nombre, No. Control, correo..." oninput="filtrarTabla()">
+                </div>
+                <select class="fsel" id="filtroTipo" onchange="filtrarTabla()">
+                    <option value="">Todos los tipos</option>
+                    <option value="alumno">Alumno</option>
+                    <option value="docente">Docente</option>
+                </select>
+                <?php endif; ?>
+                <div style="margin-left:auto;">
                     <select class="fsel" id="filtroEstado" onchange="filtrarTabla()">
                         <option value="">Todos los estados</option>
                         <option value="pagado">Pagado</option>
                         <option value="pendiente">Pendiente</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="res-count" id="contadorResultados"></div>
+            <div class="res-count" id="contadorResultados"></div>
 
-                <!-- Tabla -->
-                <div class="adeudos-panel">
-                <!-- Tabla -->
+            <!-- Tabla -->
+            <div class="adeudos-panel">
                 <table class="adeudos-table">
                     <thead>
                         <tr>
+                            <?php if (!$esPersonal): ?>
                             <th>Usuario</th>
                             <th>No. Control / RFC</th>
                             <th>Correo</th>
                             <th>Tipo</th>
+                            <?php endif; ?>
                             <th>Libro</th>
-                            <th>F. préstamo</th>
-                            <th>F. devolución</th>
+                            <th>Fecha de préstamo</th>
+                            <th>Fecha de devolución</th>
                             <th>Multa</th>
                             <th>Estado</th>
+                            <?php if (!$esPersonal): ?>
                             <th>Acciones</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody id="tablaBody">
                         <?php if ($adeudos && $adeudos->num_rows > 0): ?>
                             <?php while ($row = $adeudos->fetch_assoc()): ?>
                                 <?php
-                                    $pagado   = $row['pagada'] === 'si';
+                                    $pagado = $row['pagada'] === 'si';
                                     $estadoBadge = $pagado
                                         ? '<span class="badge-pagado">Pagado</span>'
                                         : '<span class="badge-pendiente">Pendiente</span>';
 
-                                    // Badge tipo igual que usuarios
                                     $tipoLower = strtolower($row['tipo']);
                                     if ($tipoLower === 'alumno') {
                                         $tipoBadge = '<span class="badge-tipo-alumno">' . htmlspecialchars($row['tipo']) . '</span>';
                                     } elseif ($tipoLower === 'docente') {
                                         $tipoBadge = '<span class="badge-tipo-docente">' . htmlspecialchars($row['tipo']) . '</span>';
-                                    } elseif ($tipoLower === 'administrativo') {
-                                        $tipoBadge = '<span class="badge-tipo-administrativo">' . htmlspecialchars($row['tipo']) . '</span>';
                                     } elseif ($tipoLower === 'encargado') {
                                         $tipoBadge = '<span class="badge-tipo-encargado">' . htmlspecialchars($row['tipo']) . '</span>';
                                     } elseif ($tipoLower === 'invitado') {
@@ -232,22 +252,24 @@ if ($esPersonal) {
                                     } else {
                                         $tipoBadge = '<span class="badge-tipo-otro">' . htmlspecialchars($row['tipo']) . '</span>';
                                     }
-                                    
 
                                     $correo = strlen($row['correo']) > 24
                                         ? substr($row['correo'], 0, 24) . '...'
                                         : $row['correo'];
                                 ?>
                                 <tr>
+                                    <?php if (!$esPersonal): ?>
                                     <td class="td-nombre"><?= htmlspecialchars($row['usuario']) ?></td>
                                     <td class="td-control"><?= htmlspecialchars($row['idUsuario'] ?? '—') ?></td>
                                     <td title="<?= htmlspecialchars($row['correo']) ?>"><?= htmlspecialchars($correo) ?></td>
                                     <td><?= $tipoBadge ?></td>
+                                    <?php endif; ?>
                                     <td><?= htmlspecialchars($row['libro']) ?></td>
                                     <td><?= date('d/m/Y', strtotime($row['fechaPrestamo'])) ?></td>
                                     <td><?= date('d/m/Y', strtotime($row['fechaDevolucion'])) ?></td>
                                     <td class="td-monto">$<?= number_format((float)$row['monto'], 2) ?></td>
                                     <td><?= $estadoBadge ?></td>
+                                    <?php if (!$esPersonal): ?>
                                     <td>
                                         <div style="display:flex; gap:6px; align-items:center;">
                                             <?php if (!$pagado && $puedePagar): ?>
@@ -256,19 +278,18 @@ if ($esPersonal) {
                                                     Pagar
                                                 </button>
                                             <?php endif; ?>
-
                                             <?php if (!$pagado && $puedeCondonar): ?>
                                                 <button class="btn-condonar"
                                                     onclick="confirmarCondonar(<?= $row['idMulta'] ?>, '<?= htmlspecialchars($row['usuario']) ?>', '$<?= number_format((float)$row['monto'], 2) ?>')">
                                                     Condonar
                                                 </button>
                                             <?php endif; ?>
-
                                             <?php if ($pagado): ?>
                                                 <span class="sin-accion">—</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
@@ -287,13 +308,15 @@ if ($esPersonal) {
 document.addEventListener('DOMContentLoaded', actualizarContador);
 
 function filtrarTabla() {
-    const txt  = document.getElementById('buscador').value.toLowerCase();
-    const tipo = document.getElementById('filtroTipo').value.toLowerCase();
+    const txt  = document.getElementById('buscador') ? document.getElementById('buscador').value.toLowerCase() : '';
+    const tipo = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value.toLowerCase() : '';
     const est  = document.getElementById('filtroEstado').value.toLowerCase();
     let visibles = 0;
 
     document.querySelectorAll('#tablaBody tr').forEach(function(tr) {
-        if (tr.querySelector('.td-empty')) return;
+        if (tr.querySelector('.td-empty')) {
+   
+    }
         const texto     = tr.textContent.toLowerCase();
         const tipoBadge = tr.querySelector('[class*="badge-tipo"]');
         const tipoBadgeTxt = tipoBadge ? tipoBadge.textContent.trim().toLowerCase() : '';
@@ -308,7 +331,6 @@ function filtrarTabla() {
         if (mostrar) visibles++;
     });
 
-    // Mostrar mensaje si no hay resultados
     const tbody = document.getElementById('tablaBody');
     const sinResultados = document.getElementById('sinResultadosAdeudos');
     if (visibles === 0) {
@@ -326,11 +348,15 @@ function filtrarTabla() {
 }
 
 function actualizarContador() {
-    const visibles = document.querySelectorAll('#tablaBody tr:not([style*="none"])').length;
+    const visibles = document.querySelectorAll('#tablaBody tr:not([style*="none"]):not(.td-empty)').length;
+    const filaVacia = document.querySelector('#tablaBody .td-empty');
     const el = document.getElementById('contadorResultados');
-    if (el) el.textContent = visibles + ' adeudo' + (visibles !== 1 ? 's' : '') + ' encontrado' + (visibles !== 1 ? 's' : '');
+    if (filaVacia || visibles === 0) {
+        if (el) el.textContent = '0 adeudos encontrados';
+    } else {
+        if (el) el.textContent = visibles + ' adeudo' + (visibles !== 1 ? 's' : '') + ' encontrado' + (visibles !== 1 ? 's' : '');
+    }
 }
-
 function confirmarPago(idMulta, usuario, monto) {
     Swal.fire({
         title: '¿Confirmar pago?',

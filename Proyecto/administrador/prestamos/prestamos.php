@@ -1,5 +1,6 @@
 <?php
 session_start();
+date_default_timezone_set('America/Mazatlan');
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
@@ -16,7 +17,8 @@ $puedeDevolver = tienePermiso($conn, $_SESSION['idUsuario'], 'prestamos', 'devol
 $esPersonal    = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
 
 
-// Actualizar préstamos vencidos automáticamente
+
+// Actualizar préstamos vencidos
 $conn->query("
     UPDATE Prestamo 
     SET estado = 'vencido' 
@@ -28,12 +30,12 @@ if ($esPersonal) {
     $idU = $_SESSION['idUsuario'];
     $totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND idUsuario = '$idU'")->fetch_assoc()['c'];
     $totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido' AND idUsuario = '$idU'")->fetch_assoc()['c'];
-    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND idUsuario = '$idU' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
+    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND DATE(fechaDevolucion) = CURDATE() AND idUsuario = '$idU'")->fetch_assoc()['c'];
     $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto' AND idUsuario = '$idU'");
 } else {
     $totalActivos   = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo'")->fetch_assoc()['c'];
     $totalVencidos  = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'vencido'")->fetch_assoc()['c'];
-    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND fechaDevolucion BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)")->fetch_assoc()['c'];
+    $totalPorVencer = $conn->query("SELECT COUNT(*) AS c FROM Prestamo WHERE estado = 'activo' AND DATE(fechaDevolucion) = CURDATE()")->fetch_assoc()['c'];
     $prestamos = $conn->query("SELECT * FROM vista_prestamos WHERE estado != 'devuelto'");
 }
 
@@ -72,13 +74,15 @@ if ($prestamos) {
 <?php elseif (isset($_GET['error'])): ?>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const errores = {
-            'campos_vacios':  'Faltan campos obligatorios',
-            'no_disponible':  'El ejemplar ya no está disponible',
-            'insert_fallido': 'Error al guardar el préstamo',
-            'max_prestamos':  'El usuario ya alcanzó el límite máximo de préstamos permitidos',
-            'tiene_adeudo':   'El usuario tiene multas pendientes y no puede realizar préstamos'
-        };
+
+    const errores = {
+    'campos_vacios':  'Faltan campos obligatorios',
+    'no_disponible':  'El ejemplar ya no está disponible',
+    'insert_fallido': 'Error al guardar el préstamo',
+    'max_prestamos':  'El usuario ya alcanzó el límite máximo de préstamos',
+    'tiene_adeudo':   'El usuario tiene multas pendientes',
+    'tiene_vencidos': 'El usuario tiene préstamos vencidos'
+};
     Swal.fire({
         icon: 'error',
         title: 'Error',
@@ -184,34 +188,41 @@ if ($prestamos) {
 </div>
             <!-- Toolbar -->
             <div class="toolbar">
+                <?php if (!$esPersonal): ?>
                 <div class="search-box">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
                     <input type="text" id="searchInput" placeholder="Buscar por título, correo..." oninput="filtrar()">
                 </div>
-                <select class="fsel" id="filtroEstado" onchange="filtrar()">
-                    <option value="">Todos los estados</option>
-                    <option value="activo">Activo</option>
-                    <option value="vencido">Vencido</option>
-                </select>
-                <?php if ($puedeAgregar): ?>
-                    <button class="btn-add" data-bs-toggle="modal" data-bs-target="#modalAgregarPrestamo">+ Agregar Préstamo</button>
                 <?php endif; ?>
+                <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                    <select class="fsel" id="filtroEstado" onchange="filtrar()">
+                        <option value="">Todos los estados</option>
+                        <option value="activo">Activo</option>
+                        <option value="vencido">Vencido</option>
+                    </select>
+                    <?php if ($puedeAgregar): ?>
+                        <button class="btn-add" data-bs-toggle="modal" data-bs-target="#modalAgregarPrestamo">+ Agregar Préstamo</button>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="res-count" id="resCount"></div>
-
             <!-- Tabla -->
             <div class="tw">
                 <table>
                     <thead>
                         <tr>
+                            <?php if (!$esPersonal): ?>
                             <th>Título</th>
                             <th>Correo</th>
+                            <?php else: ?>
+                            <th>Título</th>
+                            <?php endif; ?>
                             <th>Fecha de préstamo</th>
                             <th>Fecha de devolución</th>
                             <th>Estado</th>
                             <th>Tiempo restante</th>
-                            <?php if ($puedeDevolver): ?><th>Acción</th><?php endif; ?>
+                            <?php if ($puedeDevolver && !$esPersonal): ?><th>Acción</th><?php endif; ?>
                         </tr>
                     </thead>
                     <tbody id="tablaBody">
@@ -234,15 +245,19 @@ if ($prestamos) {
                                 $correo = strlen($row['correoInst']) > 20 ? substr($row['correoInst'], 0, 20) . '...' : $row['correoInst'];
                             ?>
                             <tr data-estado="<?= $row['estado'] ?>" data-titulo="<?= strtolower($row['titulo']) ?>" data-correo="<?= strtolower($row['correoInst']) ?>">
+                                <?php if (!$esPersonal): ?>
                                 <td style="font-weight:500;" title="<?= htmlspecialchars($row['titulo']) ?>"><?= htmlspecialchars($titulo) ?></td>
                                 <td style="font-size:11px;color:#888;" title="<?= htmlspecialchars($row['correoInst']) ?>"><?= htmlspecialchars($correo) ?></td>
+                                <?php else: ?>
+                                <td style="font-weight:500;" title="<?= htmlspecialchars($row['titulo']) ?>"><?= htmlspecialchars($titulo) ?></td>
+                                <?php endif; ?>
                                 <td><?= date('Y-m-d', strtotime($row['fechaPrestamo'])) ?></td>
                                 <td><?= date('Y-m-d', strtotime($row['fechaDevolucion'])) ?></td>
                                 <td><?= $badge ?></td>
                                 <td><?= $tiempo ?></td>
-                                <?php if ($puedeDevolver): ?>
-                                    <td>
-                                        <button class="btn-devolver" onclick="abrirModalDevolver(
+                                <?php if ($puedeDevolver && !$esPersonal): ?>
+                                <td>
+                                    <button class="btn-devolver" onclick="abrirModalDevolver(
                                         '<?= $row['idPrestamo'] ?>',
                                         '<?= htmlspecialchars(addslashes($row['titulo'])) ?>',
                                         '<?= htmlspecialchars(addslashes($row['correoInst'])) ?>',
@@ -251,19 +266,15 @@ if ($prestamos) {
                                         '<?= date('Y-m-d', strtotime($row['fechaDevolucion'])) ?>',
                                         '<?= $row['estado'] ?>',
                                         '<?= $row['diasRestantes'] ?>'
-                                        )">Devolver</button>
-                                        </td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
+                                    )">Devolver</button>
+                                </td>
                                 <?php endif; ?>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
-
-        </div>
-    </main>
-</div>
 
 <!-- MODAL - Agregar Préstamo -->
 <div class="modal fade" id="modalAgregarPrestamo" tabindex="-1" aria-hidden="true">
@@ -274,57 +285,80 @@ if ($prestamos) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form method="POST" action="procesar_prestamo.php" >
-               
+                <form method="POST" action="procesar_prestamo.php">
+
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="float-none w-auto px-2 fs-6 text-muted">Datos del Usuario</legend>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Número de Cuenta <span class="text-danger">*</span></label>
-                                <input type="text" id="inputIdUsuario" name="idUsuario" class="form-control" placeholder="RFC o No. Control" onblur="buscarUsuario()" required>
+                                <input type="text" id="inputIdUsuario" name="idUsuario"
+                                    class="form-control" placeholder="RFC o No. Control"
+                                    onblur="buscarUsuario()"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();buscarUsuario();}"
+                                    required>
                                 <small id="msgUsuario" class="text-danger d-none">Usuario no encontrado</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Tipo de usuario</label>
-                                <input type="text" id="inputTipoUsuario" class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputTipoUsuario" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
                             </div>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Nombre</label>
-                                <input type="text" id="inputNombre" class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputNombre" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Correo</label>
-                                <input type="text" id="inputCorreo" class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <input type="text" id="inputCorreo" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
                             </div>
                         </div>
                     </fieldset>
+
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="float-none w-auto px-2 fs-6 text-muted">Datos del préstamo</legend>
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Código del Ejemplar <span class="text-danger">*</span></label>
-                                <input type="text" id="inputCodigo" name="codigoEjemplar"class="form-control" placeholder="Código del ejemplar" onblur="buscarEjemplar()"onkeydown="if(event.key==='Enter'){event.preventDefault(); buscarEjemplar(); document.querySelector('[name=\'fechaDevolucion\']').focus();}"required>
+                                <label class="form-label fw-semibold">ISBN <span class="text-danger">*</span></label>
+                                <input type="text" id="inputIsbn" name="isbn"
+                                    class="form-control" placeholder="ISBN del libro"
+                                    onblur="buscarEjemplar()"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();buscarEjemplar();}"
+                                    required>
                                 <small id="msgEjemplar" class="text-danger d-none">Ejemplar no encontrado</small>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Título del libro</label>
-                                <input type="text" id="inputTitulo" class="form-control" placeholder="Se llena automáticamente" readonly>
+                                <label class="form-label fw-semibold">Título</label>
+                                <input type="text" id="inputTitulo" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
                             </div>
                         </div>
-                        <input type="hidden" id="inputIdEjemplar" name="idEjemplar">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Autor</label>
+                                <input type="text" id="inputAutor" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Editorial</label>
+                                <input type="text" id="inputEditorial" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
+                            </div>
+                        </div>
+                        <!-- Campos hidden: estos son los que realmente se envían al servidor -->
+                        <input type="hidden" id="inputIdEjemplar"       name="idEjemplar">
+                        <input type="hidden" id="inputFechaPrestamo"    name="fechaPrestamo"   value="<?= date('Y-m-d') ?>">
+                        <input type="hidden" id="inputFechaDevolucion"  name="fechaDevolucion">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Fecha de préstamo</label>
-                                <input type="date" name="fechaPrestamo" id="inputFechaPrestamo" class="form-control" value="<?= date('Y-m-d') ?>">
+                                <input type="text" class="form-control campo-bloqueado" value="<?= date('d/m/Y') ?>" disabled>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Fecha de devolución <span class="text-danger">*</span></label>
-                                <input type="date" name="fechaDevolucion" class="form-control" required>
+                                <input type="text" id="inputFechaDevolucionVisible" class="form-control campo-bloqueado" placeholder="Se llena automáticamente" disabled>
                             </div>
                         </div>
                     </fieldset>
+
                     <div class="d-flex justify-content-end gap-2">
                         <button type="submit" class="btn btn-success px-4">Agregar Préstamo</button>
                         <button type="button" class="btn btn-danger px-4" data-bs-dismiss="modal" onclick="limpiarModal()">Cancelar</button>
@@ -403,6 +437,17 @@ function buscarUsuario() {
                     document.querySelector('[name="fechaDevolucion"]').value = '';
                     return;
                 }
+
+                if (data.tieneVencidos) {
+                    msg.textContent = 'El usuario tiene préstamos vencidos, NO puede realizar préstamos';
+                    msg.classList.remove('d-none');
+                    document.getElementById('inputNombre').value      = '';
+                    document.getElementById('inputCorreo').value      = '';
+                    document.getElementById('inputTipoUsuario').value = '';
+                    document.querySelector('[name="fechaDevolucion"]').value = '';
+                    return;
+                }
+
                 // Verificar máximo de préstamos
                 if (data.excedeMax) {
                     msg.textContent = 'Usuario con maximo de prestamos activos, NO puede realizar más';
@@ -418,9 +463,20 @@ function buscarUsuario() {
                 document.getElementById('inputTipoUsuario').value = data.tipoPersona;
                 msg.classList.add('d-none');
                 if (data.diasPrestamo > 0) {
-                    const hoy = new Date();
-                    hoy.setDate(hoy.getDate() + parseInt(data.diasPrestamo));
-                    document.querySelector('[name="fechaDevolucion"]').value = hoy.toISOString().split('T')[0];
+                    // Sumar solo días hábiles (lunes a viernes)
+                    const fecha = new Date();
+                    let diasRestantes = parseInt(data.diasPrestamo);
+                    while (diasRestantes > 0) {
+                        fecha.setDate(fecha.getDate() + 1);
+                        const dia = fecha.getDay(); // 0=domingo, 6=sábado
+                        if (dia !== 0 && dia !== 6) diasRestantes--;
+                    }
+                    const yyyy = fecha.getFullYear();
+                    const mm   = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const dd   = String(fecha.getDate()).padStart(2, '0');
+                    const fechaStr = `${yyyy}-${mm}-${dd}`;
+                    document.getElementById('inputFechaDevolucion').value        = fechaStr;
+                    document.getElementById('inputFechaDevolucionVisible').value = `${dd}/${mm}/${yyyy}`;
                 }
             } else {
                 document.getElementById('inputNombre').value      = '';
@@ -432,42 +488,47 @@ function buscarUsuario() {
             }
         });
 }
-// Para limpiar el modal al presionar cancelar 
 function limpiarModal() {
-    document.getElementById('inputIdUsuario').value  = '';
-    document.getElementById('inputNombre').value     = '';
-    document.getElementById('inputCorreo').value     = '';
-    document.getElementById('inputTipoUsuario').value = '';
-    document.getElementById('inputCodigo').value     = '';
-    document.getElementById('inputTitulo').value     = '';
-    document.getElementById('inputIdEjemplar').value = '';
-    document.querySelector('[name="fechaDevolucion"]').value = '';
+    document.getElementById('inputIdUsuario').value          = '';
+    document.getElementById('inputNombre').value             = '';
+    document.getElementById('inputCorreo').value             = '';
+    document.getElementById('inputTipoUsuario').value        = '';
+    document.getElementById('inputIsbn').value               = '';
+    document.getElementById('inputTitulo').value             = '';
+    document.getElementById('inputAutor').value              = '';
+    document.getElementById('inputEditorial').value          = '';
+    document.getElementById('inputIdEjemplar').value         = '';
+    document.getElementById('inputFechaDevolucion').value    = '';
+    document.getElementById('inputFechaDevolucionVisible').value = '';
     document.getElementById('msgUsuario').classList.add('d-none');
     document.getElementById('msgEjemplar').classList.add('d-none');
 }
 
                                 
 function buscarEjemplar() {
-    const codigo = document.getElementById('inputCodigo').value.trim();
-    const msg    = document.getElementById('msgEjemplar');
-    if (codigo === '') return;
-    fetch('buscar_ejemplar.php?codigo=' + encodeURIComponent(codigo))
+    const isbn = document.getElementById('inputIsbn').value.trim();
+    const msg  = document.getElementById('msgEjemplar');
+    if (isbn === '') return;
+    fetch('buscar_ejemplar.php?isbn=' + encodeURIComponent(isbn))
         .then(res => res.json())
         .then(data => {
             if (data.encontrado && data.disponible) {
-                document.getElementById('inputTitulo').value     = data.titulo;
+                document.getElementById('inputTitulo').value    = data.titulo;
+                document.getElementById('inputAutor').value     = data.autor;
+                document.getElementById('inputEditorial').value = data.editorial;
                 document.getElementById('inputIdEjemplar').value = data.idEjemplar;
                 msg.classList.add('d-none');
             } else {
-                document.getElementById('inputTitulo').value     = '';
+                document.getElementById('inputTitulo').value    = '';
+                document.getElementById('inputAutor').value     = '';
+                document.getElementById('inputEditorial').value = '';
                 document.getElementById('inputIdEjemplar').value = '';
-                msg.textContent = data.encontrado ? 'El ejemplar "' + data.titulo + '" ya está prestado' : 'Ejemplar no encontrado';
+                msg.textContent = data.encontrado ? 'El libro "' + data.titulo + '" no tiene ejemplares disponibles' : 'ISBN no encontrado';
                 msg.classList.remove('d-none');
             }
         });
 }
 
-// ... las funciones que ya tienes (filtrar, buscarUsuario, buscarEjemplar) ...
 
 document.addEventListener('DOMContentLoaded', () => {
     const count = document.querySelectorAll('#tablaBody tr[data-estado]').length;

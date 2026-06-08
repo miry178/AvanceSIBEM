@@ -229,3 +229,13 @@
 .btn-grn { padding: 7px 14px; background: #2d6a2d; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; color: #fff; cursor: pointer; }
 .btn-grn:hover { background: #1f4d1f; }
 .swal2-container { z-index: 99999 !important; }
+
+/* ── Campos bloqueados del modal ── */
+.campo-bloqueado {
+    background: #eaf3de !important;
+    color: #27500a !important;
+    border-color: #b5d48a !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+    user-select: none;
+}

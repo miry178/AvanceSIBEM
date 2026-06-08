@@ -1,5 +1,6 @@
 <?php
-$conn = new mysqli("localhost", "root", "5775", "biblioteca");
+session_start();
+require_once '../../bd/conexion.php';
 if ($conn->connect_error) {
     die("Error de conexión: " . $conn->connect_error);
 }
@@ -21,7 +22,9 @@ if (!$titulo || !$autor || !$anioPublicacion || !$idTipoMaterial) {
 $isbn        = trim($_POST['isbn']        ?? '') ?: null;
 $idArea      = trim($_POST['idArea']      ?? '') ?: null;
 $idCarrera   = trim($_POST['idCarrera']   ?? '') ?: null;
-$esPrestable = $_POST['esPrestable']      ?? 'no';
+// Si tiene ejemplares prestables, es prestable
+$ejemplares = (int)(trim($_POST['ejemplares'] ?? '') ?: trim($_POST['ejemplares_np'] ?? 0));
+$esPrestable = ($ejemplares > 0 && isset($_POST['ejemplares'])) ? 'si' : 'no';
 
 // Ejemplares: viene de campoPrestable o campoEjemplaresSolo
 $ejemplares  = (int)(trim($_POST['ejemplares']    ?? '') 
@@ -46,8 +49,8 @@ $stmt->bind_param(
 );
 
 if (!$stmt->execute()) {
-    header("Location: inicio.php?exito=1");
-exit;
+    header("Location: ../home/inicio.php?error=insert_fallido");
+    exit;
 }
 
 $idMaterial = $conn->insert_id;
@@ -68,6 +71,5 @@ for ($i = 1; $i <= $ejemplares; $i++) {
     $stmtEj->execute();
 }
 
-$conn->close();
 header("Location: ../home/inicio.php?exito=1");
 exit;

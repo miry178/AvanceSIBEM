@@ -8,7 +8,6 @@ if (!$idMaterial) {
     exit;
 }
 
-// Buscar el material por ID en la vista
 $stmt = $conn->prepare("SELECT * FROM vista_material WHERE idMaterial = ?");
 $stmt->bind_param("i", $idMaterial);
 $stmt->execute();

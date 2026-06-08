@@ -282,6 +282,7 @@ $divisiones = $conn->query("SELECT idDivision, descripcion FROM Division ORDER B
 <script>
 const puedeEditar     = <?= $puedeEditar ? 'true' : 'false' ?>;
 const puedeDesactivar = <?= $puedeDesactivar ? 'true' : 'false' ?>;
+const ID_SESION       = '<?= $_SESSION['idUsuario'] ?>';
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -524,6 +525,10 @@ function guardarUsuario() {
 }
 
 function confirmarToggle(id, nombre, estadoActual) {
+    if (id === ID_SESION) {
+        Swal.fire({ icon: 'warning', title: 'Acción no permitida', text: 'No puedes desactivar tu propia cuenta mientras estás en sesión.', confirmButtonColor: '#b8b800' });
+        return;
+    }
     const activando = estadoActual === 'no';
     Swal.fire({
         icon: 'warning',

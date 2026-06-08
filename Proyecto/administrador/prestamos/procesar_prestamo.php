@@ -5,10 +5,10 @@ if ($conn->connect_error) {
 }
 
 // Verificar que llegaron los campos obligatorios
-$idUsuario      = trim($_POST['idUsuario']      ?? '');
-$idEjemplar     = trim($_POST['idEjemplar']     ?? '');
-$fechaPrestamo  = trim($_POST['fechaPrestamo']  ?? '');
-$fechaDevolucion= trim($_POST['fechaDevolucion']?? '');
+$idUsuario       = trim($_POST['idUsuario']       ?? '');
+$idEjemplar      = trim($_POST['idEjemplar']      ?? '');
+$fechaPrestamo   = trim($_POST['fechaPrestamo']   ?? '');
+$fechaDevolucion = trim($_POST['fechaDevolucion'] ?? '');
 
 if (!$idUsuario || !$idEjemplar || !$fechaPrestamo || !$fechaDevolucion) {
     header("Location: prestamos.php?error=campos_vacios");
@@ -86,6 +86,19 @@ $stmt->bind_param("ssiss", $idUsuario, $correoInst, $idEjemplar, $fechaPrestamo,
 
 if (!$stmt->execute()) {
     header("Location: prestamos.php?error=insert_fallido");
+    exit;
+}
+
+// Verificar préstamos vencidos
+$checkVencidos = $conn->prepare("
+    SELECT COUNT(*) AS total FROM Prestamo 
+    WHERE idUsuario = ? AND estado = 'vencido'
+");
+$checkVencidos->bind_param("s", $idUsuario);
+$checkVencidos->execute();
+$tieneVencidos = $checkVencidos->get_result()->fetch_assoc()['total'];
+if ($tieneVencidos > 0) {
+    header("Location: prestamos.php?error=tiene_vencidos");
     exit;
 }
 

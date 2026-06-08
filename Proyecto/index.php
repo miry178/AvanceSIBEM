@@ -56,7 +56,7 @@ $exito = $_GET["exito"] ?? "";
                     <div class="row align-items-center g-3">
 
                         <div class="col-12 col-md-6" >
-                        <img src="/ProyectoBiblioteca/Proyecto/administrador/img/biblioteca.jpeg" alt="Biblioteca" 
+                        <img src="administrador/img/biblioteca.jpeg" alt="Biblioteca" 
                             style="width:100%; height:250px; object-fit:cover; border-radius:8px;">
                                 
                     </div>

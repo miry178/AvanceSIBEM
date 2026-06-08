@@ -1,6 +1,4 @@
 <?php
-// Si no viene el correo en sesión, regresar al paso 1
-// session_start() inicia la sesión PHP para guardar datos entre páginas
 session_start();
 
 if(!isset($_SESSION['correo_verificacion'])){
@@ -9,16 +7,6 @@ if(!isset($_SESSION['correo_verificacion'])){
 }
 
 $error = $_GET['error'] ?? '';
-if($error === '1'){
-    echo '<div class="alert alert-danger text-center" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>Código incorrecto. Intenta de nuevo.
-          </div>';
-}
-if($error === '2'){
-    echo '<div class="alert alert-warning text-center" role="alert">
-            <i class="bi bi-clock-fill me-2"></i>El código ha expirado. Solicita uno nuevo.
-          </div>';
-}
 ?>
 
 <!DOCTYPE html>
@@ -28,28 +16,35 @@ if($error === '2'){
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIBEM - Verificar Código</title>
 
-    <!-- Bootstrap 5.3.8 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
           rel="stylesheet"
           integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
           crossorigin="anonymous">
 
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
           rel="stylesheet">
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
             crossorigin="anonymous"></script>
 
-    <!-- CSS propio -->
     <link rel="stylesheet" href="../login/diseno_login.css">
 </head>
 
 <body class="d-flex align-items-center justify-content-center">
 
     <main class="container py-4">
+
+        <?php if($error === '1'): ?>
+        <div class="alert alert-danger text-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Código incorrecto. Intenta de nuevo.
+        </div>
+        <?php elseif($error === '2'): ?>
+        <div class="alert alert-warning text-center" role="alert">
+            <i class="bi bi-clock-fill me-2"></i>El código ha expirado. Solicita uno nuevo.
+        </div>
+        <?php endif; ?>
+
         <div class="row justify-content-center">
             <div class="col-12 col-md-8 col-lg-6 col-xl-5">
                 <div class="card border-0 shadow-sm">
@@ -57,10 +52,7 @@ if($error === '2'){
 
                         <!-- Logo -->
                         <div class="text-center mb-3">
-                            <img src="img/logo_its.png"
-                                 alt="Logo ITS"
-                                 style="max-height: 70px;"
-                                 onerror="this.style.display='none'">
+                            <img src="img/logo_its.png" alt="Logo ITS" style="max-height: 70px;" onerror="this.style.display='none'">
                         </div>
 
                         <h5 class="text-center fw-bold mb-1">Verifica tu correo</h5>

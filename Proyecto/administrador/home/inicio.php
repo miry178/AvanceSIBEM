@@ -165,13 +165,16 @@ $esPersonal = in_array($_SESSION['tipoPersona'] ?? '', ['Alumno', 'Docente']);
                     <!-- Categorías cargadas dinámicamente desde la BD -->
                     <select class="filter-select" id="filtroClasificacion" onchange="buscarMaterial()">
                         <option value="">Todas las clasificaciones</option>
-                        <!-- utilizamos query en la consulta para consultas fijas sin variables del usuario -->
                         <?php
-                                                                                                             //excluye los registros donde clasificación está vacía
-                            $result = $conn->query("SELECT DISTINCT clasificacion FROM vista_material WHERE clasificacion IS NOT NULL ORDER BY clasificacion");
-                             // fetch_assoc() trae una fila a la vez como arreglo el while sigue ejecutándose mientras haya filas
-                            while ($row = $result->fetch_assoc()) {
-                                echo '<option value="' . htmlspecialchars($row['clasificacion']) . '">' . htmlspecialchars($row['clasificacion']) . '</option>';
+                            // Áreas
+                            $areas = $conn->query("SELECT descripcion FROM Area ORDER BY descripcion");
+                            while ($a = $areas->fetch_assoc()) {
+                                echo '<option value="' . htmlspecialchars($a['descripcion']) . '">' . htmlspecialchars($a['descripcion']) . '</option>';
+                            }
+                            // Carreras
+                            $carreras = $conn->query("SELECT descripcion FROM Carrera ORDER BY descripcion");
+                            while ($c = $carreras->fetch_assoc()) {
+                                echo '<option value="' . htmlspecialchars($c['descripcion']) . '">' . htmlspecialchars($c['descripcion']) . '</option>';
                             }
                         ?>
                     </select>
@@ -514,6 +517,7 @@ function confirmarLogout() {
         }
     });
 }
+
 function validarFormulario() {
     const titulo = document.querySelector('[name="titulo"]').value.trim();
     const autor  = document.querySelector('[name="autor"]').value.trim();

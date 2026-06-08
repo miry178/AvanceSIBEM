@@ -36,6 +36,16 @@ if ($row) {
     $stmtMulta->execute();
     $tieneMulta = $stmtMulta->get_result()->fetch_assoc()['total'] > 0;
 
+        // Verificar si tiene préstamos vencidos
+    $stmtVencidos = $conn->prepare("
+        SELECT COUNT(*) AS total FROM Prestamo 
+        WHERE idUsuario = ? AND estado = 'vencido'
+    ");
+    $stmtVencidos->bind_param("s", $id);
+    $stmtVencidos->execute();
+    $tieneVencidos = $stmtVencidos->get_result()->fetch_assoc()['total'] > 0;
+
+
     // Verificar préstamos activos vs máximo permitido
     $stmtMax = $conn->prepare("
         SELECT COUNT(*) AS total FROM Prestamo 
@@ -59,16 +69,26 @@ if ($row) {
     $maxPrestamo = $regla['maxPrestamo'] ?? 2;
     $excedeMax   = $totalActivos >= $maxPrestamo;
 
-    echo json_encode([
-        'encontrado'   => true,
-        'nombre'       => $row['nombre'],
-        'correo'       => $row['correoInst'],
-        'tipoPersona'  => $row['tipoPersona'] ?? 'Sin tipo',
-        'diasPrestamo' => $row['diasPrestamo'] ?? 0,
-        'tieneMulta'   => $tieneMulta,
-        'excedeMax'    => $excedeMax,
-        'maxPrestamo'  => $maxPrestamo
-    ]);
+    // Verificar si es Docente para darle más días
+$stmtDocente = $conn->prepare("SELECT idUsuario FROM Docente WHERE idUsuario = ?");
+$stmtDocente->bind_param("s", $id);
+$stmtDocente->execute();
+$esDocente = $stmtDocente->get_result()->num_rows > 0;
+
+// Asignar días según tipo de persona
+$diasPrestamo = $esDocente ? 5 : ($row['diasPrestamo'] ?? 2);
+
+echo json_encode([
+    'encontrado'   => true,
+    'nombre'       => $row['nombre'],
+    'correo'       => $row['correoInst'],
+    'tipoPersona'  => $row['tipoPersona'] ?? 'Sin tipo',
+    'diasPrestamo' => $diasPrestamo,
+    'tieneMulta'   => $tieneMulta,
+    'tieneVencidos'=> $tieneVencidos,
+    'excedeMax'    => $excedeMax,
+    'maxPrestamo'  => $maxPrestamo
+]);
 } else {
     echo json_encode(['encontrado' => false]);
 }
